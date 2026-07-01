@@ -72,31 +72,45 @@ const ROLE_BADGE: Record<string, string> = {
 const MOCK_PENDING = [
   {
     id: "p1",
-    title: "SynthWave Music Pack",
-    vendor: "Echo Dynamics",
-    type: "DIGITAL_DOWNLOAD",
-    submitted: "2026-06-30T10:00:00.000Z",
+    title: "Stripe Connect Integration Kit",
+    vendor: "PayBridge Labs",
+    type: "PAYMENT_GATEWAY",
+    submitted: "2026-07-01T10:00:00.000Z",
   },
   {
     id: "p2",
+    title: "CryptoPay Gateway",
+    vendor: "PayBridge Labs",
+    type: "PAYMENT_GATEWAY",
+    submitted: "2026-07-01T08:30:00.000Z",
+  },
+  {
+    id: "p3",
+    title: "Razorpay Route Integration",
+    vendor: "PayBridge Labs",
+    type: "PAYMENT_GATEWAY",
+    submitted: "2026-06-30T16:15:00.000Z",
+  },
+  {
+    id: "p4",
+    title: "Neon Drift Racer",
+    vendor: "Lumen Games",
+    type: "GAME",
+    submitted: "2026-06-30T11:20:00.000Z",
+  },
+  {
+    id: "p5",
     title: "ResumeBoost AI Coach",
     vendor: "NovaLabs",
     type: "AI_TOOL",
     submitted: "2026-06-29T14:30:00.000Z",
   },
   {
-    id: "p3",
+    id: "p6",
     title: "Crypto Dashboard Kit",
     vendor: "PixelCraft Studio",
     type: "TEMPLATE",
     submitted: "2026-06-28T09:15:00.000Z",
-  },
-  {
-    id: "p4",
-    title: "Mastering Web3 Book",
-    vendor: "MakerPress",
-    type: "EBOOK",
-    submitted: "2026-06-27T18:45:00.000Z",
   },
 ];
 

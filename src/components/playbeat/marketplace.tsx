@@ -70,6 +70,8 @@ const TYPE_OPTIONS = [
   { value: "COURSE", label: "Course" },
   { value: "MEMBERSHIP", label: "Membership" },
   { value: "AFFILIATE_PRODUCT", label: "Affiliate Offer" },
+  { value: "PAYMENT_GATEWAY", label: "Payment Gateway" },
+  { value: "GAME", label: "Game" },
 ];
 
 function HeroStat({

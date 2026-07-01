@@ -24,6 +24,8 @@ const PRODUCT_TYPES = [
   "COURSE",
   "MEMBERSHIP",
   "AFFILIATE_PRODUCT",
+  "PAYMENT_GATEWAY",
+  "GAME",
 ] as const;
 
 // gradient color pairs per type (used as fallback cover visuals)
@@ -38,6 +40,8 @@ const TYPE_GRADIENTS: Record<string, [string, string]> = {
   COURSE: ["#eab308", "#ca8a04"],
   MEMBERSHIP: ["#06b6d4", "#0e7490"],
   AFFILIATE_PRODUCT: ["#8b5cf6", "#6d28d9"],
+  PAYMENT_GATEWAY: ["#0ea5e9", "#0369a1"],
+  GAME: ["#f97316", "#c2410c"],
 };
 
 const TYPE_ICONS: Record<string, string> = {
@@ -51,6 +55,8 @@ const TYPE_ICONS: Record<string, string> = {
   COURSE: "GraduationCap",
   MEMBERSHIP: "Crown",
   AFFILIATE_PRODUCT: "Share2",
+  PAYMENT_GATEWAY: "CreditCard",
+  GAME: "Gamepad2",
 };
 
 interface SeedProduct {
@@ -415,6 +421,157 @@ const SEED_PRODUCTS: SeedProduct[] = [
     fileSize: "180 MB",
     version: "2.0",
   },
+  // ---- Payment Gateways (products posted in the backend, surfaced on the storefront) ----
+  {
+    title: "Stripe Connect Integration Kit",
+    type: "PAYMENT_GATEWAY",
+    price: 149,
+    discountPrice: 119,
+    vendorStore: "PayBridge Labs",
+    categoryName: "Payment Gateways",
+    shortDescription: "Drop-in Stripe Connect checkout, subscriptions & marketplace splits.",
+    description:
+      "A production-ready Stripe Connect integration kit with hosted checkout, subscriptions, Connect Express onboarding, and marketplace split payouts. Includes Next.js + Node adapters, webhooks, and a typed SDK.",
+    tags: ["stripe", "payments", "checkout", "subscriptions", "connect"],
+    licenseType: "Commercial license (1 domain)",
+    fileSize: "24 MB",
+    version: "4.1.0",
+    featured: true,
+  },
+  {
+    title: "PayPal Checkout Pro",
+    type: "PAYMENT_GATEWAY",
+    price: 89,
+    vendorStore: "PayBridge Labs",
+    categoryName: "Payment Gateways",
+    shortDescription: "Smart PayPal buttons + Pay Later + vaulted cards.",
+    description:
+      "PayPal Checkout Pro adds smart payment buttons, Pay Later messaging, and card vaulting to any storefront. Supports 200+ markets, 25 currencies, and fraudnet risk scoring out of the box.",
+    tags: ["paypal", "checkout", "payments", "fraud"],
+    licenseType: "Commercial license (1 domain)",
+    fileSize: "12 MB",
+    version: "2.3.0",
+  },
+  {
+    title: "Paddle Billing Suite",
+    type: "PAYMENT_GATEWAY",
+    price: 199,
+    discountPrice: 159,
+    vendorStore: "PayBridge Labs",
+    categoryName: "Payment Gateways",
+    shortDescription: "Merchant-of-record billing, taxes & subscriptions handled.",
+    description:
+      "Paddle Billing Suite acts as merchant of record, handling global sales tax, VAT, and invoicing for digital products. Includes dunning, proration, and a customer portal. Best for SaaS that wants to sell globally without tax headaches.",
+    tags: ["paddle", "billing", "tax", "subscriptions", "merchant-of-record"],
+    licenseType: "Commercial license (unlimited domains)",
+    fileSize: "31 MB",
+    version: "1.7.2",
+    featured: true,
+  },
+  {
+    title: "Lemon Squeezy Storefront Pack",
+    type: "PAYMENT_GATEWAY",
+    price: 79,
+    vendorStore: "PayBridge Labs",
+    categoryName: "Payment Gateways",
+    shortDescription: "Sell digital products & software with built-in licensing.",
+    description:
+      "The Lemon Squeezy Storefront Pack gives you a hosted checkout, license key generation, and webhook events for digital product sales. Perfect for indie makers selling software, eBooks, and templates.",
+    tags: ["lemon-squeezy", "digital-products", "licensing", "checkout"],
+    licenseType: "Commercial license (1 store)",
+    fileSize: "9 MB",
+    version: "1.2.0",
+  },
+  {
+    title: "CryptoPay Gateway",
+    type: "PAYMENT_GATEWAY",
+    price: 129,
+    discountPrice: 99,
+    vendorStore: "PayBridge Labs",
+    categoryName: "Payment Gateways",
+    shortDescription: "Accept BTC, ETH, USDT & 40+ tokens with auto settlement.",
+    description:
+      "CryptoPay Gateway lets your storefront accept Bitcoin, Ethereum, USDT, and 40+ ERC-20 tokens. Includes real-time conversion, auto settlement to fiat, and non-custodial wallet support.",
+    tags: ["crypto", "bitcoin", "ethereum", "usdt", "web3", "payments"],
+    licenseType: "Commercial license (1 domain)",
+    fileSize: "18 MB",
+    version: "3.0.1",
+    featured: true,
+  },
+  {
+    title: "Razorpay Route Integration",
+    type: "PAYMENT_GATEWAY",
+    price: 69,
+    vendorStore: "PayBridge Labs",
+    categoryName: "Payment Gateways",
+    shortDescription: "UPI, cards, netbanking & EMI for the Indian market.",
+    description:
+      "Razorpay Route Integration adds UPI, RuPay, netbanking, and EMI options optimized for the Indian market. Includes Route splits for marketplace payouts and GST-compliant invoicing.",
+    tags: ["razorpay", "upi", "india", "payments", "gst"],
+    licenseType: "Commercial license (1 domain)",
+    fileSize: "11 MB",
+    version: "2.0.0",
+  },
+  // ---- Games ----
+  {
+    title: "Neon Drift Racer",
+    type: "GAME",
+    price: 24,
+    discountPrice: 18,
+    vendorStore: "Lumen Games",
+    categoryName: "Games",
+    shortDescription: "Synthwave arcade racer with 40 tracks & online leaderboards.",
+    description:
+      "Neon Drift Racer is a high-speed synthwave arcade racer with 40 handcrafted tracks, 12 unlockable cars, and global online leaderboards. Drift, boost, and chase the perfect lap. Windows, macOS, and Linux builds included.",
+    tags: ["game", "racing", "arcade", "synthwave", "indie"],
+    licenseType: "Personal license (single user)",
+    fileSize: "2.4 GB",
+    version: "1.4.0",
+    featured: true,
+  },
+  {
+    title: "Dungeon of Aether",
+    type: "GAME",
+    price: 19,
+    vendorStore: "Lumen Games",
+    categoryName: "Games",
+    shortDescription: "Roguelike dungeon crawler with procedural levels.",
+    description:
+      "Dungeon of Aether is a turn-based roguelike with procedurally generated dungeons, 8 character classes, and 200+ unique items. Permadeath, daily challenges, and mod support included.",
+    tags: ["game", "roguelike", "rpg", "indie", "dungeon"],
+    licenseType: "Personal license (single user)",
+    fileSize: "1.1 GB",
+    version: "2.1.0",
+  },
+  {
+    title: "Pixel Kingdom Builder Kit",
+    type: "GAME",
+    price: 34,
+    discountPrice: 27,
+    vendorStore: "Lumen Games",
+    categoryName: "Games",
+    shortDescription: "2D pixel-art kingdom builder engine + 500 sprites.",
+    description:
+      "Pixel Kingdom Builder Kit is a complete 2D game engine for building pixel-art kingdom sims. Includes 500 sprites, tilemap editor, NPC AI, save system, and full Godot 4 source. Make and sell your own game.",
+    tags: ["game", "game-engine", "pixel-art", "godot", "assets"],
+    licenseType: "Commercial license (sell your game)",
+    fileSize: "640 MB",
+    version: "3.0",
+  },
+  {
+    title: "Starbound Tactics",
+    type: "GAME",
+    price: 29,
+    vendorStore: "Lumen Games",
+    categoryName: "Games",
+    shortDescription: "Turn-based space strategy with fleet combat.",
+    description:
+      "Starbound Tactics is a turn-based 4X space strategy game with fleet combat, diplomacy, and tech trees. Play across 6 alien factions on a procedurally generated galaxy. Cross-platform single-player and hot-seat multiplayer.",
+    tags: ["game", "strategy", "4x", "space", "indie"],
+    licenseType: "Personal license (single user)",
+    fileSize: "1.8 GB",
+    version: "1.0.3",
+  },
 ];
 
 interface SeedVendor {
@@ -434,6 +591,8 @@ const SEED_VENDORS: SeedVendor[] = [
   { storeName: "PixelCraft Studio", ownerName: "Sam Okafor", email: "sam@pixelcraft.design", description: "Premium design templates & graphics.", verified: true },
   { storeName: "MakerPress", ownerName: "Yuki Tanaka", email: "yuki@makerpress.co", description: "Books & memberships for makers.", verified: false },
   { storeName: "LearnAI Academy", ownerName: "Omar Haddad", email: "omar@learnai.education", description: "Courses on AI & modern engineering.", verified: true },
+  { storeName: "PayBridge Labs", ownerName: "Sofia Marin", email: "sofia@paybridge.dev", description: "Payment gateway integrations & checkout SDKs.", verified: true },
+  { storeName: "Lumen Games", ownerName: "Kai Nakamura", email: "kai@lumengames.studio", description: "Indie games & game development assets.", verified: true },
 ];
 
 const SEED_CATEGORIES = [
@@ -447,6 +606,8 @@ const SEED_CATEGORIES = [
   { name: "Courses", icon: "GraduationCap", color: "#eab308", description: "Video courses and bootcamps." },
   { name: "Memberships", icon: "Crown", color: "#06b6d4", description: "Recurring-access memberships & clubs." },
   { name: "Affiliate Offers", icon: "Share2", color: "#8b5cf6", description: "Programs you can promote for commission." },
+  { name: "Payment Gateways", icon: "CreditCard", color: "#0ea5e9", description: "Payment processing integrations & checkout SDKs for your storefront." },
+  { name: "Games", icon: "Gamepad2", color: "#f97316", description: "Indie games, game assets, and interactive entertainment." },
 ];
 
 const REVIEW_SEED = [

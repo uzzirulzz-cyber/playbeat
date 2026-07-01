@@ -128,3 +128,31 @@ Work Log:
 
 Stage Summary:
 - PlayBeat Storefront is production-ready and browser-verified. Full golden path (browse → detail → add to cart → coupon → checkout → license key) works end-to-end. All 5 role views render with real seeded data. Lint clean, no runtime errors, responsive, accessible. Coupon/affiliate attribution bug fixed.
+
+---
+Task ID: 6
+Agent: Main (Z.ai Code)
+Task: Add Payment Gateways + Games categories with backend-posted products surfacing on the storefront; update inventory/approvals list
+
+Work Log:
+- Added two new product types to seed.ts: `PAYMENT_GATEWAY` (gradient #0ea5e9→#0369a1, icon CreditCard) and `GAME` (gradient #f97316→#c2410c, icon Gamepad2). Registered in PRODUCT_TYPES, TYPE_GRADIENTS, TYPE_ICONS.
+- Added two new categories to SEED_CATEGORIES: "Payment Gateways" (icon CreditCard, color #0ea5e9) and "Games" (icon Gamepad2, color #f97316).
+- Added 6 payment gateway products (posted in the backend, surfaced on the storefront): Stripe Connect Integration Kit, PayPal Checkout Pro, Paddle Billing Suite, Lemon Squeezy Storefront Pack, CryptoPay Gateway, Razorpay Route Integration — all type PAYMENT_GATEWAY, category "Payment Gateways", vendor "PayBridge Labs".
+- Added 4 games products: Neon Drift Racer, Dungeon of Aether, Pixel Kingdom Builder Kit, Starbound Tactics — all type GAME, category "Games", vendor "Lumen Games".
+- Added 2 new vendors to SEED_VENDORS: PayBridge Labs (payments) and Lumen Games (indie games), both verified.
+- Registered `CreditCard` and `Gamepad2` in product-cover ICON_MAP so category pills + product covers render the correct icons.
+- Added "Payment Gateway" and "Game" options to the marketplace TYPE_OPTIONS filter dropdown.
+- Updated admin-console MOCK_PENDING (inventory/approvals list) to include 3 payment gateway products (Stripe, CryptoPay, Razorpay) + 1 game (Neon Drift Racer) at the top, each with Approve/Reject actions.
+- Ran `bun run lint` — clean (0 errors).
+- Re-seeded via POST /api/v1/seed. Verified via curl:
+  - GET /products?category=payment-gateways → total: 6 (Stripe, PayPal, Paddle, Lemon Squeezy, CryptoPay, Razorpay)
+  - GET /products?category=games → total: 4 (Neon Drift, Pixel Kingdom, Dungeon of Aether, Starbound)
+  - GET /categories → "Payment Gateways | CreditCard | 6" and "Games | Gamepad2 | 4" both present.
+- agent-browser verification (1440x900):
+  - Homepage shows "Payment Gateways 6" and "Games 4" category pills.
+  - Clicking "Payment Gateways 6" filters grid to "Filtered 6 results" showing all 6 payment gateway products with Add-to-cart buttons.
+  - Clicking "Stripe Connect Integration Kit" opens detail Sheet with reviews + Add to cart / Buy now.
+  - Admin → Approvals tab shows Stripe/CryptoPay/Razorpay (payment gateway) + Neon Drift Racer (game) in the pending inventory list with Approve/Reject buttons.
+
+Stage Summary:
+- "Payment Gateways" and "Games" categories are now live. 6 payment gateway products + 4 games posted in the backend appear on the storefront under their respective categories with correct icons, gradients, filters, and detail sheets. The admin Approvals/inventory list reflects the new payment gateway products. Total marketplace products grew from 24 → 34. Lint clean, browser-verified.

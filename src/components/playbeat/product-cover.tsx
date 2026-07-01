@@ -12,6 +12,8 @@ import {
   GraduationCap,
   Crown,
   Share2,
+  CreditCard,
+  Gamepad2,
   Package,
   type LucideIcon,
 } from "lucide-react";
@@ -29,6 +31,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   GraduationCap,
   Crown,
   Share2,
+  CreditCard,
+  Gamepad2,
   Package,
 };
 
