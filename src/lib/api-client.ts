@@ -389,6 +389,54 @@ export function formatMoney(n: number): string {
   return moneyFormatter.format(n);
 }
 
+// ===== Currency system (PKR for Pakistan, USD elsewhere) =====
+
+export type Currency = "USD" | "PKR";
+
+// Conversion rate: 1 USD = 280 PKR. Adjust via PKR_RATE env if needed.
+export const PKR_RATE = Number(process.env.NEXT_PUBLIC_PKR_RATE || 280);
+
+export const CURRENCY_META: Record<
+  Currency,
+  { code: Currency; symbol: string; locale: string; rate: number; label: string }
+> = {
+  USD: { code: "USD", symbol: "$", locale: "en-US", rate: 1, label: "USD" },
+  PKR: { code: "PKR", symbol: "Rs", locale: "en-PK", rate: PKR_RATE, label: "PKR" },
+};
+
+/**
+ * Format a USD amount in the given display currency. PKR amounts are rounded
+ * to the nearest whole rupee (no decimals) per local convention.
+ */
+export function formatPrice(
+  usdAmount: number,
+  currency: Currency = "USD",
+): string {
+  const meta = CURRENCY_META[currency];
+  const converted = usdAmount * meta.rate;
+  if (currency === "PKR") {
+    return `Rs ${Math.round(converted).toLocaleString("en-PK")}`;
+  }
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(usdAmount);
+}
+
+/**
+ * Auto-detect the preferred currency from the browser timezone.
+ * Pakistan (Asia/Karachi) → PKR, everything else → USD.
+ */
+export function detectCurrency(): Currency {
+  if (typeof Intl === "undefined") return "USD";
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+    return tz === "Asia/Karachi" ? "PKR" : "USD";
+  } catch {
+    return "USD";
+  }
+}
+
 export function formatDate(iso: string): string {
   try {
     return new Intl.DateTimeFormat("en-US", {

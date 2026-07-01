@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { ProductCover } from "./product-cover";
 import { StarRating } from "./star-rating";
 import { usePlaybeatStore } from "@/lib/store";
-import { formatMoney, type Product } from "@/lib/api-client";
+import { formatPrice, type Product } from "@/lib/api-client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +31,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
   const openProduct = usePlaybeatStore((s) => s.openProduct);
   const addToCart = usePlaybeatStore((s) => s.addToCart);
   const setCartOpen = usePlaybeatStore((s) => s.setCartOpen);
+  const currency = usePlaybeatStore((s) => s.currency);
   const favorites = usePlaybeatStore((s) => s.favorites);
   const toggleFavorite = usePlaybeatStore((s) => s.toggleFavorite);
   const favorited = favorites.includes(product.id);
@@ -141,11 +142,11 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
                   ? product.type === "AFFILIATE_PRODUCT"
                     ? "Free"
                     : "Free"
-                  : formatMoney(product.effectivePrice)}
+                  : formatPrice(product.effectivePrice, currency)}
               </span>
               {product.discountPrice !== null && product.discountPercent > 0 && (
                 <span className="text-xs text-muted-foreground line-through">
-                  {formatMoney(product.price)}
+                  {formatPrice(product.price, currency)}
                 </span>
               )}
             </div>

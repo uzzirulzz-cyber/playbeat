@@ -239,3 +239,46 @@ Work Log:
 
 Stage Summary:
 - Header + footer now match playbeatdigital.world layout. Store checkout activated via Lemon Squeezy API (/api/v1/checkout/lemon-squeezy) — works in demo mode now, switches to live Lemon Squeezy hosted checkout when LEMONSQUEEZY_API_KEY/STORE_ID/VARIANT_ID env vars are configured. Cart defaults to Lemon Squeezy. 4 gift card products + Gift Cards category added. Lint clean, browser-verified end-to-end.
+
+---
+Task ID: 9
+Agent: Main (Z.ai Code)
+Task: Redesign hero + theme to playbeat.digital aesthetic (super UI) + region-based currency (PKR for Pakistan, USD elsewhere)
+
+Work Log:
+- Analyzed 2 uploaded reference screenshots via VLM: dark background, yellow/gold (#ffd700) brand accent, green (#22c55e) CTA buttons, trust badges (Secure, Instant Delivery, 12k+ Customers), premium dark aesthetic.
+
+**Theme update (globals.css):**
+- Dark mode: background oklch(0.12 0.008 270) (deep near-black with subtle purple tint), card oklch(0.16 0.01 270), primary green oklch(0.7 0.19 145), accent gold oklch(0.85 0.17 85).
+- Light mode: green primary + gold accent, clean white bg.
+- Updated utilities: .pb-glow (green+gold+purple radial orbs), .pb-grid (subtler grid), .pb-text-gradient (gold gradient), new .pb-text-green (green gradient), .pb-card-glow (premium card shadow).
+
+**Currency system (PKR for Pakistan, USD elsewhere):**
+- src/lib/api-client.ts: added `Currency` type, `PKR_RATE` (280, configurable via NEXT_PUBLIC_PKR_RATE), `CURRENCY_META`, `formatPrice(usd, currency)` (PKR rounded to whole rupees with "Rs" prefix, USD via Intl), `detectCurrency()` (auto-detects Asia/Karachi timezone → PKR, else USD).
+- src/lib/store.ts: added `currency` field (persisted) + `setCurrency()`, initialized via `detectCurrency()`.
+- src/components/playbeat/header.tsx: added CurrencyToggle dropdown (USD/PKR with checkmark, "Auto-detected from your region" hint) in the header action row.
+- Wired `formatPrice` + reactive `currency` into all customer-facing components:
+  - product-card.tsx (price + strikethrough)
+  - cart-sheet.tsx (line items, subtotal, discount, total, checkout button, order confirmation)
+  - product-detail-sheet.tsx (price block)
+  - marketplace.tsx Hero (featured preview cards, reactive via `currency` hook subscription)
+- Backend orders/coupons stay in USD; conversion is display-only on the client.
+
+**Hero redesign (super UI, matches playbeat.digital):**
+- Centered layout with trust badge row (Secure / Instant Delivery / 12k+ Customers) — matches reference screenshots.
+- Headline: "Pakistan's premier digital marketplace" with gold gradient on "digital marketplace".
+- Subtext: "Game keys, software licenses, AI tools, and gift cards — delivered instantly. Trusted by thousands across Pakistan & worldwide."
+- Search bar (h-12, backdrop-blur) + green "Explore" CTA with arrow.
+- Quick category chips: Games, Gift Cards, Software, AI Tools, Subscriptions (click → filters grid + scrolls).
+- Featured product showcase: 3 responsive cards (sm:grid-cols-3) with cover, type badge, discount %, vendor + verified check, price (currency-aware), strikethrough original, rating star. Framer Motion staggered entrance + hover lift.
+- Background: pb-grid + pb-glow + two floating blur orbs (green + gold).
+- Removed old 2-column hero with floating tilted cards + HeroStat cards (cleaner, more premium).
+
+**Verification:**
+- VLM rated new hero 8/10: "Premium & polished... trust badges present (Secure, Instant Delivery, 12k+ Customers)... clean, aligned product cards."
+- agent-browser: hero renders with headline, trust badges, search, quick cats, 3 featured cards. Currency toggle in header.
+- Currency toggle USD→PKR: featured cards $199→Rs 55,720, $99→Rs 27,720 (strikethrough Rs 36,120), $19→Rs 5,320. Cart line item + subtotal convert to Rs 55,720. Switching back PKR→USD reverts to $199.00 reactively. PKR persisted across reload (localStorage).
+- bun run lint: clean (0 errors). Dev log all 200s.
+
+Stage Summary:
+- Theme now matches playbeat.digital: dark premium bg, gold brand accent, green CTA, trust badges. Hero redesigned to super-UI (centered, trust badges, gold headline, quick cats, featured showcase). Currency system: auto-detects PK region (Asia/Karachi → PKR @ 280/USD), else USD; manually toggleable via header dropdown; reactive across all customer-facing price displays (cards, detail sheet, cart, checkout). Lint clean, browser-verified.

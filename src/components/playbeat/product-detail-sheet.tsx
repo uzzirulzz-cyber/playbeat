@@ -36,7 +36,7 @@ import { StarRating } from "./star-rating";
 import { usePlaybeatStore } from "@/lib/store";
 import {
   api,
-  formatMoney,
+  formatPrice,
   formatDate,
   type Review,
 } from "@/lib/api-client";
@@ -69,6 +69,7 @@ export function ProductDetailSheet() {
   const addToCart = usePlaybeatStore((s) => s.addToCart);
   const setCartOpen = usePlaybeatStore((s) => s.setCartOpen);
   const user = usePlaybeatStore((s) => s.user);
+  const currency = usePlaybeatStore((s) => s.currency);
   const qc = useQueryClient();
 
   const { data, isLoading, isError } = useQuery({
@@ -232,13 +233,13 @@ export function ProductDetailSheet() {
                   <span className="text-3xl font-bold text-foreground">
                     {product.effectivePrice === 0
                       ? "Free"
-                      : formatMoney(product.effectivePrice)}
+                      : formatPrice(product.effectivePrice, currency)}
                   </span>
                   {product.discountPrice !== null &&
                     product.discountPercent > 0 && (
                       <>
                         <span className="text-base text-muted-foreground line-through">
-                          {formatMoney(product.price)}
+                          {formatPrice(product.price, currency)}
                         </span>
                         <Badge className="bg-accent text-accent-foreground">
                           −{product.discountPercent}%

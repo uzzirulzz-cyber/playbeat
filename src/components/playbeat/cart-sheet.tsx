@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/select";
 import { ProductCover } from "./product-cover";
 import { usePlaybeatStore } from "@/lib/store";
-import { api, formatMoney, type Order } from "@/lib/api-client";
+import { api, formatPrice, type Order } from "@/lib/api-client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -54,6 +54,7 @@ function CartRow({
 }) {
   const updateQuantity = usePlaybeatStore((s) => s.updateQuantity);
   const removeFromCart = usePlaybeatStore((s) => s.removeFromCart);
+  const currency = usePlaybeatStore((s) => s.currency);
   const p = item.product;
   return (
     <div className="flex gap-3 rounded-lg border border-border/60 bg-card/40 p-3">
@@ -99,7 +100,7 @@ function CartRow({
             </button>
           </div>
           <div className="text-sm font-semibold">
-            {formatMoney(p.effectivePrice * item.quantity)}
+            {formatPrice(p.effectivePrice * item.quantity, currency)}
           </div>
         </div>
       </div>
@@ -111,6 +112,7 @@ function OrderSuccess({ order }: { order: Order }) {
   const close = usePlaybeatStore((s) => s.setCartOpen);
   const clearCart = usePlaybeatStore((s) => s.clearCart);
   const setActiveTab = usePlaybeatStore((s) => s.setActiveTab);
+  const currency = usePlaybeatStore((s) => s.currency);
 
   const downloadables = order.items.filter((i) => i.licenseKey);
 
@@ -165,7 +167,7 @@ function OrderSuccess({ order }: { order: Order }) {
       <div className="w-full rounded-lg border border-border/60 bg-card/40 p-3 text-left text-sm">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Total paid</span>
-          <span className="font-bold">{formatMoney(order.total)}</span>
+          <span className="font-bold">{formatPrice(order.total, currency)}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Payment</span>
@@ -212,6 +214,7 @@ export function CartSheet() {
   const appliedCoupon = usePlaybeatStore((s) => s.appliedCoupon);
   const setAppliedCoupon = usePlaybeatStore((s) => s.setAppliedCoupon);
   const setActiveTab = usePlaybeatStore((s) => s.setActiveTab);
+  const currency = usePlaybeatStore((s) => s.currency);
 
   const [couponInput, setCouponInput] = React.useState("");
   const [couponLoading, setCouponLoading] = React.useState(false);
@@ -257,7 +260,7 @@ export function CartSheet() {
       });
       setCouponInput("");
       toast.success(
-        `Coupon applied — you saved ${formatMoney(result.discount)}`
+        `Coupon applied — you saved ${formatPrice(result.discount, currency)}`
       );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Invalid coupon");
@@ -370,7 +373,7 @@ export function CartSheet() {
                     <div className="text-xs">
                       <div className="font-medium">{appliedCoupon.code}</div>
                       <div className="text-muted-foreground">
-                        −{formatMoney(appliedCoupon.discount)}
+                        −{formatPrice(appliedCoupon.discount, currency)}
                       </div>
                     </div>
                   </div>
@@ -415,18 +418,18 @@ export function CartSheet() {
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between text-muted-foreground">
                   <span>Subtotal</span>
-                  <span>{formatMoney(subtotal)}</span>
+                  <span>{formatPrice(subtotal, currency)}</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-primary">
                     <span>Discount</span>
-                    <span>−{formatMoney(discount)}</span>
+                    <span>−{formatPrice(discount, currency)}</span>
                   </div>
                 )}
                 <Separator className="my-1" />
                 <div className="flex justify-between text-base font-bold">
                   <span>Total</span>
-                  <span>{formatMoney(total)}</span>
+                  <span>{formatPrice(total, currency)}</span>
                 </div>
               </div>
 
@@ -486,8 +489,8 @@ export function CartSheet() {
                   <CheckCircle2 className="size-4" />
                 )}
                 {provider === "LEMON_SQUEEZY"
-                  ? `Checkout with Lemon Squeezy · ${formatMoney(total)}`
-                  : `Place order · ${formatMoney(total)}`}
+                  ? `Checkout with Lemon Squeezy · ${formatPrice(total, currency)}`
+                  : `Place order · ${formatPrice(total, currency)}`}
               </Button>
               {provider === "LEMON_SQUEEZY" && (
                 <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">

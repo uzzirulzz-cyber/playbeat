@@ -7,14 +7,19 @@ import {
   Search,
   SlidersHorizontal,
   Sparkles,
-  Package,
   Store,
-  DollarSign,
-  Users,
   ArrowRight,
   X,
   Star,
   TrendingUp,
+  ShieldCheck,
+  Zap,
+  Trophy,
+  Gamepad2,
+  Gift,
+  KeyRound,
+  RefreshCw,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,8 +48,7 @@ import { resolveIcon } from "./product-cover";
 import { usePlaybeatStore } from "@/lib/store";
 import {
   api,
-  formatMoney,
-  formatNumber,
+  formatPrice,
   type Product,
   type ProductQuery,
 } from "@/lib/api-client";
@@ -75,40 +79,12 @@ const TYPE_OPTIONS = [
   { value: "GIFT_CARD", label: "Gift Card" },
 ];
 
-function HeroStat({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Package;
-  label: string;
-  value: string;
-}) {
-  return (
-    <Card className="bg-card/60 backdrop-blur">
-      <CardContent className="flex items-center gap-3 p-4">
-        <div className="grid size-9 place-items-center rounded-lg bg-primary/15 text-primary">
-          <Icon className="size-4" />
-        </div>
-        <div>
-          <div className="text-lg font-bold leading-none">{value}</div>
-          <div className="mt-1 text-xs text-muted-foreground">{label}</div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function Hero() {
   const setSearchQuery = usePlaybeatStore((s) => s.setSearchQuery);
+  const setNavFilter = usePlaybeatStore((s) => s.setNavFilter);
+  const currency = usePlaybeatStore((s) => s.currency);
   const [local, setLocal] = React.useState("");
   const gridRef = React.useRef<HTMLDivElement>(null);
-
-  const { data: dash } = useQuery({
-    queryKey: ["analytics-summary"],
-    queryFn: () => api.analytics(),
-    staleTime: 60_000,
-  });
 
   const { data: featured } = useQuery({
     queryKey: ["featured-products"],
@@ -116,7 +92,6 @@ function Hero() {
     staleTime: 60_000,
   });
 
-  const summary = dash?.summary;
   const preview = (featured?.items || []).slice(0, 3);
 
   const explore = () => {
@@ -126,128 +101,194 @@ function Hero() {
     }, 50);
   };
 
+  const quickCats: Array<{ label: string; cat: string; icon: typeof Gamepad2 }> = [
+    { label: "Games", cat: "games", icon: Gamepad2 },
+    { label: "Gift Cards", cat: "gift-cards", icon: Gift },
+    { label: "Software", cat: "software-licenses", icon: KeyRound },
+    { label: "AI Tools", cat: "ai-tools", icon: Sparkles },
+    { label: "Subscriptions", cat: "saas-subscriptions", icon: RefreshCw },
+  ];
+
   return (
     <section className="relative overflow-hidden border-b border-border/40">
-      <div className="absolute inset-0 pb-grid opacity-60" />
+      <div className="absolute inset-0 pb-grid opacity-50" />
       <div className="absolute inset-0 pb-glow" />
-      <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-2 lg:py-20">
-        <div className="flex flex-col justify-center">
-          <Badge
-            variant="outline"
-            className="mb-4 w-fit border-primary/40 bg-primary/10 text-primary"
-          >
-            <Sparkles className="size-3" />
-            Over {summary?.products ?? 24} digital products · 8 verified vendors
-          </Badge>
-          <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-            The global marketplace for{" "}
-            <span className="pb-text-gradient">
-              AI tools, software &amp; digital products
-            </span>
-          </h1>
-          <p className="mt-5 max-w-xl text-base text-muted-foreground sm:text-lg">
-            Discover, sell, and resell AI tools, software licenses, SaaS
-            subscriptions, templates, courses, and affiliate offers — all in one
-            premium storefront.
-          </p>
+      <div className="pointer-events-none absolute -left-20 top-10 size-72 rounded-full bg-primary/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-20 top-32 size-80 rounded-full bg-accent/10 blur-3xl" />
 
-          <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+      <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:py-20">
+        <div className="mx-auto max-w-3xl text-center">
+          {/* Trust badge row — matches playbeat.digital */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 flex flex-wrap items-center justify-center gap-2"
+          >
+            <Badge className="gap-1 border-primary/30 bg-primary/10 text-primary">
+              <ShieldCheck className="size-3" /> Secure
+            </Badge>
+            <Badge className="gap-1 border-accent/30 bg-accent/10 text-accent-foreground">
+              <Zap className="size-3" /> Instant Delivery
+            </Badge>
+            <Badge className="gap-1 border-primary/30 bg-primary/10 text-primary">
+              <Trophy className="size-3" /> 12k+ Customers
+            </Badge>
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl"
+          >
+            Pakistan&apos;s premier{" "}
+            <span className="pb-text-gradient">digital marketplace</span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground sm:text-lg"
+          >
+            Game keys, software licenses, AI tools, and gift cards — delivered
+            instantly. Trusted by thousands across Pakistan &amp; worldwide.
+          </motion.p>
+
+          {/* Search + CTA */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="mx-auto mt-7 flex max-w-xl flex-col gap-2 sm:flex-row"
+          >
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={local}
                 onChange={(e) => setLocal(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && explore()}
-                placeholder="Search AI tools, templates, courses..."
-                className="h-11 pl-9"
+                placeholder="Search game keys, AI tools, gift cards..."
+                className="h-12 border-border/60 bg-card/60 pl-10 backdrop-blur"
               />
             </div>
-            <Button size="lg" onClick={explore} className="h-11">
+            <Button size="lg" onClick={explore} className="h-12 gap-1.5">
               Explore
               <ArrowRight className="size-4" />
             </Button>
-          </div>
+          </motion.div>
 
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <HeroStat
-              icon={Package}
-              label="Products"
-              value={summary ? formatNumber(summary.products) : "—"}
-            />
-            <HeroStat
-              icon={Store}
-              label="Vendors"
-              value={summary ? formatNumber(summary.vendors) : "—"}
-            />
-            <HeroStat
-              icon={DollarSign}
-              label="Revenue"
-              value={summary ? formatMoney(summary.revenue) : "—"}
-            />
-            <HeroStat
-              icon={Users}
-              label="Customers"
-              value={summary ? formatNumber(summary.customers) : "—"}
-            />
-          </div>
+          {/* Quick category access */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-6 flex flex-wrap items-center justify-center gap-2"
+          >
+            <span className="text-xs text-muted-foreground">Popular:</span>
+            {quickCats.map((c) => {
+              const Icon = c.icon;
+              return (
+                <button
+                  key={c.label}
+                  onClick={() => {
+                    setNavFilter(c.cat, "popular");
+                    setTimeout(
+                      () =>
+                        gridRef.current?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        }),
+                      50,
+                    );
+                  }}
+                  className="group flex items-center gap-1.5 rounded-full border border-border/60 bg-card/40 px-3 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur transition-all hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+                >
+                  <Icon className="size-3" />
+                  {c.label}
+                </button>
+              );
+            })}
+          </motion.div>
         </div>
 
-        {/* Floating product preview */}
-        <div className="relative hidden lg:block">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="relative h-full w-full max-w-md">
-              {preview.map((p, i) => {
-                const positions = [
-                  "left-0 top-6 rotate-[-6deg] z-10",
-                  "right-0 top-0 rotate-[4deg] z-20",
-                  "left-1/4 bottom-0 rotate-[2deg] z-30",
-                ];
-                return (
-                  <motion.div
-                    key={p.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 + i * 0.15 }}
-                    className={cn(
-                      "absolute w-64 cursor-pointer",
-                      positions[i]
-                    )}
-                    onClick={() =>
-                      usePlaybeatStore.getState().openProduct(p.slug)
-                    }
-                  >
-                    <Card className="overflow-hidden border-border/60 bg-card/80 backdrop-blur-xl">
-                      <ProductCover
-                        cover={p.cover}
-                        className="aspect-[4/3] w-full rounded-none"
-                        iconSize={48}
-                      />
-                      <CardContent className="space-y-1 p-3">
-                        <div className="text-xs text-muted-foreground">
-                          {p.vendor?.storeName}
-                        </div>
-                        <div className="line-clamp-1 text-sm font-semibold">
-                          {p.title}
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-bold text-primary">
-                            {p.effectivePrice === 0
-                              ? "Free"
-                              : formatMoney(p.effectivePrice)}
+        {/* Featured product showcase */}
+        {preview.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-3"
+          >
+            {preview.map((p, i) => (
+              <motion.button
+                key={p.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 + i * 0.08 }}
+                whileHover={{ y: -4 }}
+                onClick={() => usePlaybeatStore.getState().openProduct(p.slug)}
+                className="group text-left"
+              >
+                <Card className="overflow-hidden border-border/60 bg-card/60 pb-card-glow backdrop-blur-xl transition-shadow group-hover:shadow-xl">
+                  <div className="relative">
+                    <ProductCover
+                      cover={p.cover}
+                      className="aspect-[16/10] w-full rounded-none"
+                      iconSize={52}
+                    />
+                    <div className="absolute left-2 top-2 flex gap-1">
+                      <Badge className="bg-background/80 text-[9px] uppercase text-foreground backdrop-blur">
+                        {p.type.replace(/_/g, " ").toLowerCase()}
+                      </Badge>
+                      {p.discountPercent > 0 && (
+                        <Badge className="bg-accent text-[9px] text-accent-foreground">
+                          −{p.discountPercent}%
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <CardContent className="p-3.5">
+                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Store className="size-3" />
+                      {p.vendor?.storeName ?? "Independent"}
+                      {p.vendor?.verified && (
+                        <ShieldCheck className="size-3 text-primary" />
+                      )}
+                    </div>
+                    <div className="mt-1 line-clamp-1 text-sm font-semibold">
+                      {p.title}
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-base font-bold text-primary">
+                          {p.effectivePrice === 0
+                            ? "Free"
+                            : formatPrice(
+                                p.effectivePrice,
+                                currency,
+                              )}
+                        </span>
+                        {p.discountPrice !== null && (
+                          <span className="text-[11px] text-muted-foreground line-through">
+                            {formatPrice(
+                              p.price,
+                              currency,
+                            )}
                           </span>
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Star className="size-3 fill-amber-400 text-amber-400" />
-                            {p.rating.toFixed(1)}
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+                        )}
+                      </div>
+                      <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <Star className="size-3 fill-accent text-accent" />
+                        {p.rating.toFixed(1)}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.button>
+            ))}
+          </motion.div>
+        )}
       </div>
       <div ref={gridRef} />
     </section>
@@ -553,6 +594,7 @@ export function Marketplace() {
           <Card className="bg-card/60">
             <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
               <Package className="size-8 text-muted-foreground" />
+
               <div>
                 <p className="font-medium">No products found</p>
                 <p className="text-sm text-muted-foreground">

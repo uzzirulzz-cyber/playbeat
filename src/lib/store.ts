@@ -2,7 +2,11 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Product } from "./api-client";
+import {
+  detectCurrency,
+  type Currency,
+  type Product,
+} from "./api-client";
 
 export interface CartItem {
   product: Product;
@@ -71,6 +75,11 @@ interface PlaybeatState {
   navCategory: string;
   navSort: string;
   setNavFilter: (category: string, sort?: string) => void;
+
+  // Display currency — PKR for Pakistan, USD elsewhere. Auto-detected on
+  // first load, manually toggleable via the header currency switch.
+  currency: Currency;
+  setCurrency: (c: Currency) => void;
 
   // Auth (lightweight demo)
   user: { id: string; name: string; email: string; role: string } | null;
@@ -150,17 +159,21 @@ export const usePlaybeatStore = create<PlaybeatState>()(
       setNavFilter: (category, sort) =>
         set({ navCategory: category, navSort: sort ?? "popular" }),
 
+      currency: detectCurrency(),
+      setCurrency: (c) => set({ currency: c }),
+
       user: null,
       setUser: (u) => set({ user: u }),
     }),
     {
       name: "playbeat-storage",
-      // Persist only cart, favorites, user, searchQuery
+      // Persist only cart, favorites, user, searchQuery, currency
       partialize: (state) => ({
         cart: state.cart,
         favorites: state.favorites,
         user: state.user,
         searchQuery: state.searchQuery,
+        currency: state.currency,
       }),
     }
   )

@@ -331,6 +331,67 @@ function CartButton() {
   );
 }
 
+function CurrencyToggle() {
+  const currency = usePlaybeatStore((s) => s.currency);
+  const setCurrency = usePlaybeatStore((s) => s.setCurrency);
+  const [open, setOpen] = React.useState(false);
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-1 px-2 text-xs font-semibold"
+          aria-label="Switch currency"
+        >
+          <span className="text-accent">{currency === "PKR" ? "Rs" : "$"}</span>
+          <span className="hidden sm:inline">{currency}</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuLabel className="text-xs text-muted-foreground">
+          Display currency
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => {
+            setCurrency("USD");
+            setOpen(false);
+          }}
+          className={cn(
+            "flex items-center justify-between",
+            currency === "USD" && "bg-primary/10",
+          )}
+        >
+          <span className="flex items-center gap-2">
+            <span className="text-accent">$</span> USD
+          </span>
+          {currency === "USD" && <CheckCircle2 className="size-3.5 text-primary" />}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => {
+            setCurrency("PKR");
+            setOpen(false);
+          }}
+          className={cn(
+            "flex items-center justify-between",
+            currency === "PKR" && "bg-primary/10",
+          )}
+        >
+          <span className="flex items-center gap-2">
+            <span className="text-accent">Rs</span> PKR
+          </span>
+          {currency === "PKR" && <CheckCircle2 className="size-3.5 text-primary" />}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <p className="px-2 py-1.5 text-[10px] leading-tight text-muted-foreground">
+          Auto-detected from your region. PKR for Pakistan, USD elsewhere.
+        </p>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 // Category nav links — match the playbeatdigital.world storefront layout.
 // Each link drives the Marketplace filter (category slug or sort order).
 const NAV_LINKS: Array<{
@@ -487,6 +548,7 @@ export function Header() {
         {tabs.length <= 1 && <div className="mx-auto hidden md:block" />}
 
         <div className="ml-auto flex items-center gap-1">
+          <CurrencyToggle />
           <ThemeToggle />
           <NotificationsBell />
           <CartButton />
