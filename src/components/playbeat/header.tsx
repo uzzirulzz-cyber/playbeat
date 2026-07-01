@@ -17,6 +17,7 @@ import {
   Shield,
   LayoutDashboard,
   LogIn,
+  LogOut,
   Loader2,
   CheckCircle2,
 } from "lucide-react";
@@ -48,7 +49,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
-import { usePlaybeatStore, type TabKey } from "@/lib/store";
+import { usePlaybeatStore, visibleTabs, type TabKey } from "@/lib/store";
 import { api, type Notification, formatDate } from "@/lib/api-client";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
@@ -174,6 +175,7 @@ function SignInDialog() {
   const [password, setPassword] = React.useState("playbeat123");
   const [loading, setLoading] = React.useState(false);
   const setUser = usePlaybeatStore((s) => s.setUser);
+  const setActiveTab = usePlaybeatStore((s) => s.setActiveTab);
 
   const handleLogin = async () => {
     setLoading(true);
@@ -193,14 +195,43 @@ function SignInDialog() {
 
   if (user) {
     return (
-      <Button variant="ghost" size="sm" className="gap-2">
-        <span className="grid size-6 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-          {user.name.charAt(0).toUpperCase()}
-        </span>
-        <span className="hidden sm:inline max-w-[120px] truncate">
-          {user.name}
-        </span>
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm" className="gap-2">
+            <span className="grid size-6 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+              {user.name.charAt(0).toUpperCase()}
+            </span>
+            <span className="hidden sm:inline max-w-[120px] truncate">
+              {user.name}
+            </span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel className="flex flex-col gap-0.5">
+            <span className="text-sm font-medium">{user.name}</span>
+            <span className="text-xs font-normal text-muted-foreground">
+              {user.email}
+            </span>
+            <Badge
+              variant="outline"
+              className="mt-1 w-fit text-[10px] uppercase"
+            >
+              {user.role}
+            </Badge>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={() => {
+              setUser(null);
+              setActiveTab("marketplace");
+              toast.success("Signed out");
+            }}
+          >
+            <LogOut className="size-4 mr-2" /> Sign out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   }
 
@@ -244,11 +275,16 @@ function SignInDialog() {
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5 font-medium text-foreground">
               <CheckCircle2 className="size-3.5 text-primary" />
-              Demo account
+              Demo accounts
             </div>
-            <div className="mt-1 font-mono">
-              demo@playbeat.io / playbeat123
+            <div className="mt-1 font-mono leading-relaxed">
+              <div>demo@playbeat.io / playbeat123</div>
+              <div>admin@playbeat.io / playbeat123</div>
             </div>
+            <p className="mt-1.5 text-[11px]">
+              Sign in as admin to reveal Vendor, Affiliate, Analytics &amp;
+              Admin controls.
+            </p>
           </div>
         </div>
         <DialogFooter>
@@ -291,23 +327,30 @@ export function Header() {
   const setActiveTab = usePlaybeatStore((s) => s.setActiveTab);
   const searchQuery = usePlaybeatStore((s) => s.searchQuery);
   const setSearchQuery = usePlaybeatStore((s) => s.setSearchQuery);
+  const user = usePlaybeatStore((s) => s.user);
   const [mobileOpen, setMobileOpen] = React.useState(false);
+
+  // Role-aware tab list: the public storefront only shows Marketplace.
+  // Operator tabs (Vendor/Affiliate/Analytics/Admin) appear only when the
+  // signed-in user has the matching role.
+  const tabs = TABS.filter((t) => visibleTabs(user?.role).includes(t.key));
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:px-6">
-        {/* Mobile hamburger */}
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              aria-label="Open menu"
-            >
-              <Menu className="size-4" />
-            </Button>
-          </SheetTrigger>
+        {/* Mobile hamburger — only shown when operator tabs are available */}
+        {tabs.length > 1 && (
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                aria-label="Open menu"
+              >
+                <Menu className="size-4" />
+              </Button>
+            </SheetTrigger>
           <SheetContent side="left" className="w-72">
             <SheetHeader>
               <SheetTitle>
@@ -315,7 +358,7 @@ export function Header() {
               </SheetTitle>
             </SheetHeader>
             <nav className="mt-4 flex flex-col gap-1 p-2">
-              {TABS.map((t) => {
+              {tabs.map((t) => {
                 const Icon = t.icon;
                 return (
                   <button
@@ -339,31 +382,38 @@ export function Header() {
             </nav>
           </SheetContent>
         </Sheet>
+        )}
 
         <Logo />
 
-        {/* Desktop nav */}
-        <nav className="mx-auto hidden md:flex items-center gap-1 rounded-full border border-border bg-card/40 p-1">
-          {TABS.map((t) => {
-            const Icon = t.icon;
-            const active = activeTab === t.key;
-            return (
-              <button
-                key={t.key}
-                onClick={() => setActiveTab(t.key)}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all",
-                  active
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                )}
-              >
-                <Icon className="size-3.5" />
-                {t.label}
-              </button>
-            );
-          })}
-        </nav>
+        {/* Desktop nav — hidden for anonymous customers (public storefront
+            must not show admin/operator controls). Revealed only when the
+            signed-in user has access to more than the Marketplace. */}
+        {tabs.length > 1 && (
+          <nav className="mx-auto hidden md:flex items-center gap-1 rounded-full border border-border bg-card/40 p-1">
+            {tabs.map((t) => {
+              const Icon = t.icon;
+              const active = activeTab === t.key;
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => setActiveTab(t.key)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all",
+                    active
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                  )}
+                >
+                  <Icon className="size-3.5" />
+                  {t.label}
+                </button>
+              );
+            })}
+          </nav>
+        )}
+        {/* Spacer keeps right-aligned actions in place when nav is hidden */}
+        {tabs.length <= 1 && <div className="mx-auto hidden md:block" />}
 
         <div className="ml-auto flex items-center gap-1">
           <ThemeToggle />

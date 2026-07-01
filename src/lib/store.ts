@@ -16,6 +16,29 @@ export type TabKey =
   | "analytics"
   | "admin";
 
+/**
+ * Which nav tabs are visible for a given user role.
+ *
+ * The public storefront (home) is customer-facing and must NOT display any
+ * admin/operator controls. Anonymous visitors and regular customers only see
+ * the Marketplace. Operator dashboards are revealed only after signing in with
+ * the appropriate role.
+ */
+export function visibleTabs(role: string | undefined | null): TabKey[] {
+  if (!role || role === "CUSTOMER") return ["marketplace"];
+  if (role === "VENDOR") return ["marketplace", "vendor"];
+  if (role === "ADMIN")
+    return ["marketplace", "vendor", "affiliate", "analytics", "admin"];
+  return ["marketplace"];
+}
+
+export function canAccessTab(
+  tab: TabKey,
+  role: string | undefined | null,
+): boolean {
+  return visibleTabs(role).includes(tab);
+}
+
 interface PlaybeatState {
   activeTab: TabKey;
   setActiveTab: (t: TabKey) => void;

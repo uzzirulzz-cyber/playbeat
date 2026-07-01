@@ -156,3 +156,31 @@ Work Log:
 
 Stage Summary:
 - "Payment Gateways" and "Games" categories are now live. 6 payment gateway products + 4 games posted in the backend appear on the storefront under their respective categories with correct icons, gradients, filters, and detail sheets. The admin Approvals/inventory list reflects the new payment gateway products. Total marketplace products grew from 24 → 34. Lint clean, browser-verified.
+
+---
+Task ID: 7
+Agent: Main (Z.ai Code)
+Task: Remove admin/operator controls from the public storefront home; verify Payment Gateways category shows all products
+
+Work Log:
+- Issue #1 (Payment Gateways count): Verified DB via curl — GET /products?category=payment-gateways returns total: 6 (Stripe, PayPal, Paddle, Lemon Squeezy, CryptoPay, Razorpay). Re-seeded to guarantee full set (34 products, 12 categories, 10 vendors). Browser-confirmed the "Payment Gateways 6" pill filters the grid to "Filtered 6 results" with all 6 product cards. (Note: product IDs in this system are cuids, e.g. cmr2p83se...; no numeric ID "1183314" exists in the schema — the 6 seeded payment gateway products are the complete set.)
+- Issue #2 (remove admin controls from home): Made the storefront nav role-aware.
+  - Added `visibleTabs(role)` + `canAccessTab(tab, role)` helpers to src/lib/store.ts:
+    - Anonymous / CUSTOMER → ["marketplace"] only
+    - VENDOR → ["marketplace", "vendor"]
+    - ADMIN → ["marketplace", "vendor", "affiliate", "analytics", "admin"]
+  - Updated src/components/playbeat/header.tsx:
+    - Desktop nav and mobile hamburger now iterate `tabs` (filtered by role) instead of all TABS.
+    - Desktop nav container + mobile hamburger are hidden entirely when only 1 tab is visible (anonymous customers) — no empty/single-pill nav, clean public header.
+    - Added a sign-out flow: signed-in users get a dropdown account menu (name, email, role badge, Sign out) instead of the sign-in button. Sign-out clears the user and resets activeTab to marketplace.
+    - Updated the sign-in dialog demo hint to list both demo accounts (demo@playbeat.io + admin@playbeat.io) with a note that admin sign-in reveals the operator controls.
+  - Updated src/app/page.tsx TabContent: added a guard effect — if the active tab is not accessible to the current user's role (e.g. signed out while on Admin), it auto-redirects to marketplace. The rendered tab also respects access (effectiveTab) so an operator view never flashes for unauthorized users.
+- Lint: `bun run lint` clean (0 errors).
+- agent-browser verification (1440x900):
+  - Anonymous storefront header: only logo, theme toggle, notifications, cart, sign-in, search. NO Marketplace/Vendor/Affiliate/Analytics/Admin tabs. ✓
+  - "Payment Gateways 6" pill → grid shows "Filtered 6 results" (PayPal, Paddle, CryptoPay, Razorpay, Stripe, Lemon Squeezy). ✓
+  - Sign in as admin@playbeat.io → header reveals Marketplace/Vendor Studio/Affiliate Hub/Analytics/Admin tabs + "A Admin User" account menu. ✓
+  - Sign out → header reverts to clean public storefront, no operator tabs. ✓
+
+Stage Summary:
+- Public storefront home no longer displays any admin/operator controls. Anonymous visitors and regular customers see only the Marketplace (logo, search, theme, notifications, cart, sign-in). Operator dashboards (Vendor/Affiliate/Analytics/Admin) are gated behind role-based auth and only appear after signing in as VENDOR or ADMIN. Sign-out immediately removes them. Payment Gateways category verified showing all 6 products. Lint clean, browser-verified end-to-end.

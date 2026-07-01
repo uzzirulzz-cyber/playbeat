@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { usePlaybeatStore } from "@/lib/store";
+import { usePlaybeatStore, canAccessTab } from "@/lib/store";
 import { Header } from "@/components/playbeat/header";
 import { Footer } from "@/components/playbeat/footer";
 import { Marketplace } from "@/components/playbeat/marketplace";
@@ -16,9 +16,26 @@ import { Providers } from "@/components/playbeat/providers";
 
 function TabContent() {
   const activeTab = usePlaybeatStore((s) => s.activeTab);
+  const setActiveTab = usePlaybeatStore((s) => s.setActiveTab);
+  const user = usePlaybeatStore((s) => s.user);
+
+  // Guard: if the current user can no longer access the active tab (e.g. they
+  // signed out while viewing an operator dashboard), fall back to the public
+  // Marketplace so the storefront never exposes admin controls to customers.
+  React.useEffect(() => {
+    if (!canAccessTab(activeTab, user?.role)) {
+      setActiveTab("marketplace");
+    }
+  }, [activeTab, user?.role, setActiveTab]);
+
+  // Effective tab respects access; operator tabs render nothing until access
+  // is confirmed (the effect above will redirect).
+  const effectiveTab: typeof activeTab = canAccessTab(activeTab, user?.role)
+    ? activeTab
+    : "marketplace";
 
   const content = React.useMemo(() => {
-    switch (activeTab) {
+    switch (effectiveTab) {
       case "marketplace":
         return <Marketplace />;
       case "vendor":
@@ -32,12 +49,12 @@ function TabContent() {
       default:
         return <Marketplace />;
     }
-  }, [activeTab]);
+  }, [effectiveTab]);
 
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        key={activeTab}
+        key={effectiveTab}
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -8 }}
