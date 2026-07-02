@@ -365,3 +365,31 @@ Work Log:
 
 Stage Summary:
 - Hero now matches playbeat.digital: left-aligned, eyebrow "WORLDWIDE DIGITAL SUBSCRIPTIONS", headline "The gateway to digital heaven.", 2 CTAs, 4 stats (500+/50+/Global/<60s). Product showcase rebranded: 4-card "Featured drops" grid with custom navy/gold cards, gradient overlays, verified badges, gold prices. Lint clean, browser-verified.
+
+---
+Task ID: 12
+Agent: Main (Z.ai Code)
+Task: Add video background to hero section (fixed cover, mobile + desktop, content overlay)
+
+Work Log:
+- Copied uploaded video to /public/videos/hero-bg.mp4 (6.2MB) for static serving.
+- Added <video> element as first child of the hero <section>, layered behind all content:
+  - Attributes: autoPlay, muted, loop, playsInline (all required for mobile autoplay), preload="metadata", aria-hidden="true".
+  - className: "absolute inset-0 h-full w-full object-cover" — fills the entire hero section, crops to cover.
+  - <source src="/videos/hero-bg.mp4" type="video/mp4" />.
+- Layering (bottom → top):
+  1. Video (absolute inset-0, object-cover)
+  2. Top-to-bottom dark gradient (from-background/85 via-background/70 to-background/90) — darkens video for text readability
+  3. Left-to-right gradient (from-background via-background/60 to-transparent) — ensures left-aligned headline/text is legible
+  4. pb-grid + pb-glow + blur orbs (subtle texture, opacity reduced to 30/keep)
+  5. Content (relative, z-above) — eyebrow, headline, CTAs, stats, featured drops
+- The section already had `relative overflow-hidden` so the video is clipped to the hero bounds and content stays above via `relative`.
+
+**Verification:**
+- agent-browser desktop (1440x900): video element confirmed — autoplay:true, muted:true, loop:true, playsInline:true, objectFit:cover, 1440x1146 (covers full hero section). Video src resolves to /videos/hero-bg.mp4.
+- VLM desktop: "video background plays behind content... headline 'The gateway to digital heaven.' clearly readable with bold white/yellow text... CTAs and stats visible... text contrasts well thanks to dark overlay."
+- agent-browser mobile (390x844): VLM "text readable with high contrast (white/yellow on dark)... video likely covers hero... layout clean, centered text, clear hierarchy, buttons spaced well... responsive design works for 390px."
+- bun run lint: clean. Dev log shows no video 404s or errors.
+
+Stage Summary:
+- Hero now has the uploaded video as a fixed background (absolute inset-0, object-cover) inside the section, with dark gradient overlays keeping all content readable. Works on mobile (playsInline + muted autoplay) and desktop. Content (eyebrow, headline, CTAs, stats, featured drops) overlays correctly without breaking. Lint clean, browser-verified.

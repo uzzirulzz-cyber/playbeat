@@ -137,7 +137,26 @@ function Hero() {
 
   return (
     <section className="relative overflow-hidden border-b border-border/40">
-      <div className="absolute inset-0 pb-grid opacity-40" />
+      {/* Background video — fixed cover, sits behind all content */}
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full object-cover"
+        poster=""
+      >
+        <source src="/videos/hero-bg.mp4" type="video/mp4" />
+      </video>
+
+      {/* Dark gradient overlay — keeps text readable over the video */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background/85 via-background/70 to-background/90" />
+      {/* Side gradient for left-aligned text legibility */}
+      <div className="absolute inset-0 bg-gradient-to-r from-background via-background/60 to-transparent" />
+
+      <div className="absolute inset-0 pb-grid opacity-30" />
       <div className="absolute inset-0 pb-glow" />
       <div className="pointer-events-none absolute -left-20 top-10 size-72 rounded-full bg-accent/10 blur-3xl" />
       <div className="pointer-events-none absolute -right-20 top-40 size-80 rounded-full bg-primary/10 blur-3xl" />
