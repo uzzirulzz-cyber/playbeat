@@ -658,3 +658,29 @@ The key (eyJ0eXAi...) in .env has expired or been revoked. To restore product fe
 
 Stage Summary:
 - Storefront is correctly wired to show ONLY Lemon Squeezy products. Verified: no DB products appear, no random products, empty state on LS failure. The LS API key is returning 401 (expired/revoked) — user needs to generate a new key from the LS dashboard and update .env. Once restored, any products added in the LS dashboard will appear on the storefront within 60 seconds.
+
+---
+Task ID: 21
+Agent: Main (Z.ai Code)
+Task: Update LS API key + verify 10 real LS products on storefront
+
+Work Log:
+- User provided new LS API key (previous one returned 401 Unauthorized).
+- Verified new key via direct LS API call: STATUS 200, 10 products found in store 420060:
+  Apple TV (PKR1,070), ChatGPT Plus (PKR1,220), Claude Pro (PKR2,400), Crunchyroll (PKR920),
+  Disney+ Premium (PKR660), HBO Max (PKR770), MAXstream (PKR850), Midjourney (PKR2,100),
+  Netflix Premium 1 Month - 4K UHD (PKR570-899), Prime Video (PKR770).
+- Updated LEMONSQUEEZY_API_KEY in .env with the new key.
+- Made ensure-seed.ts resilient: wrapped in dynamic import + try/catch so Neon cold-start
+  connection errors never crash the server or block product fetching.
+- Restarted dev server. API returns configured:true, total:10 with all 10 LS products.
+- agent-browser: storefront shows all 10 products with correct PKR prices. No random/seeded products.
+
+**Verification:**
+- curl GET /api/v1/products → configured:true, total:10 (all from Lemon Squeezy, none from DB).
+- All 10 products display with correct LS priceFormatted (e.g. "PKR1,070", "PKR2,400").
+- bun run lint: clean.
+- Storefront confirmed: only LS products appear.
+
+Stage Summary:
+- New LS API key set. 10 real products from your Lemon Squeezy store now appear on the storefront: Apple TV, ChatGPT Plus, Claude Pro, Crunchyroll, Disney+ Premium, HBO Max, MAXstream, Midjourney, Netflix Premium, Prime Video. All with correct PKR prices. No random products — only what you've added in Lemon Squeezy. To add more, create them in the LS dashboard and they appear within 60 seconds.
