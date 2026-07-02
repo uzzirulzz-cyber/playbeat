@@ -176,13 +176,13 @@ export function Footer() {
             {/* Contact block */}
             <div className="mt-5 space-y-2 text-sm">
               <a
-                href="https://wa.me/923321579333"
+                href="https://wa.me/923321029333"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-primary"
               >
                 <MessageCircle className="size-3.5" />
-                WhatsApp: 0332 157 9333
+                WhatsApp: 0332 102 9333
               </a>
               <a
                 href="mailto:info@playbeat.digital"

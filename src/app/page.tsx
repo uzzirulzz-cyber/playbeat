@@ -12,7 +12,6 @@ import { Analytics } from "@/components/playbeat/analytics";
 import { AdminConsole } from "@/components/playbeat/admin-console";
 import { ProductDetailSheet } from "@/components/playbeat/product-detail-sheet";
 import { CartSheet } from "@/components/playbeat/cart-sheet";
-import { Providers } from "@/components/playbeat/providers";
 
 function TabContent() {
   const activeTab = usePlaybeatStore((s) => s.activeTab);
@@ -68,17 +67,15 @@ function TabContent() {
 
 export default function Home() {
   return (
-    <Providers>
-      <div className="flex min-h-screen flex-col bg-background">
-        <Header />
-        <main className="flex-1">
-          <TabContent />
-        </main>
-        <Footer />
-        {/* Global overlays */}
-        <ProductDetailSheet />
-        <CartSheet />
-      </div>
-    </Providers>
+    <div className="flex min-h-screen flex-col bg-background">
+      <Header />
+      <main className="flex-1">
+        <TabContent />
+      </main>
+      <Footer />
+      {/* Global overlays */}
+      <ProductDetailSheet />
+      <CartSheet />
+    </div>
   );
 }

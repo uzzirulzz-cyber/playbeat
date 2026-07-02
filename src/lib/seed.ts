@@ -711,6 +711,16 @@ export async function runSeed(): Promise<{ created: Record<string, number> }> {
   const admin = await db.user.create({
     data: { email: "admin@playbeat.io", name: "Admin User", passwordHash: password, role: "ADMIN", verified: true },
   });
+  // Executive admin accounts — founder / CEO / director (locked admin landing)
+  const founder = await db.user.create({
+    data: { email: "founder@playbeat.live", name: "Founder", passwordHash: password, role: "ADMIN", verified: true },
+  });
+  const ceo = await db.user.create({
+    data: { email: "ceo@playbeat.live", name: "CEO", passwordHash: password, role: "ADMIN", verified: true },
+  });
+  const director = await db.user.create({
+    data: { email: "director@playbeat.live", name: "Director", passwordHash: password, role: "ADMIN", verified: true },
+  });
   const customer = await db.user.create({
     data: { email: "demo@playbeat.io", name: "Demo Customer", passwordHash: password, role: "CUSTOMER", verified: true, avatar: "" },
   });
@@ -724,7 +734,7 @@ export async function runSeed(): Promise<{ created: Record<string, number> }> {
   const affiliateUser = await db.user.create({
     data: { email: "partner@playbeat.io", name: "Alex Partner", passwordHash: password, role: "CUSTOMER", verified: true },
   });
-  created.users = 3 + vendorUsers.length;
+  created.users = 6 + vendorUsers.length;
 
   // ---- Vendors ----
   const vendorMap = new Map<string, { id: string; slug: string }>();

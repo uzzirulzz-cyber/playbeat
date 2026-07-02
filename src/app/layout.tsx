@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/playbeat/theme-provider";
+import { Providers } from "@/components/playbeat/providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -63,9 +64,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <Toaster />
-          <Sonner />
+          <Providers>
+            {children}
+            <Toaster />
+            <Sonner />
+          </Providers>
         </ThemeProvider>
       </body>
     </html>

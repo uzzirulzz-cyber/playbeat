@@ -431,3 +431,65 @@ Work Log:
 
 Stage Summary:
 - All 7 uploaded brand images placed as section backgrounds: 3 full-width BrandStrip promos (luxury/community/vendor), footer background, category section texture, filter bar texture, sign-in dialog accent. Each has dark gradient overlays so text stays readable. Lint clean, all images serve 200, browser-verified.
+
+---
+Task ID: 14
+Agent: Main (Z.ai Code)
+Task: WhatsApp update + product card redesign + admin locked landing + /games /giftcards /admin routes + LS product listing
+
+Work Log:
+**WhatsApp:** Updated footer 0332 157 9333 → 0332 102 9333 (both wa.me link + display text).
+
+**Exec admin accounts:** Added 3 ADMIN users to seed: founder@playbeat.live, ceo@playbeat.live, director@playbeat.live (password: playbeat123). Re-seeded (17 users total). Verified login via curl.
+
+**Product card redesign (product-card.tsx):** Complete rewrite per spec:
+- 16:9 thumbnail with image zoom on hover (scale-105, 500ms transition)
+- Wishlist heart + Share button (bottom-right, backdrop-blur, hover scale)
+- Badge stack (top-left): Featured (gold), Bestseller (green, salesCount>800), AI Pick (for AI_TOOL type)
+- Discount badge (top-right, red, −X%)
+- Subscription badge (bottom-left, for SAAS/MEMBERSHIP)
+- Category pill + vendor name with verified check
+- Title (2 lines, line-clamp-2, hover gold)
+- Short description (1 line)
+- Star rating + review count + sales count
+- Metadata chips row: Instant Download / Digital Product / License / File Size / Version (with Lucide icons)
+- Pricing: bold effective price + strikethrough original + "SAVE X%" badge
+- Action buttons: Buy Now (green, full-width, Zap icon) + Add to Cart (outline, cart icon) + Quick View (ghost, eye icon)
+- Quick stats footer: 3-column grid (Sales / Rating / Reviews) with border-top
+- Hover: -translate-y-1.5, border-accent, shadow-2xl, image scale, title color change
+- Framer Motion stagger entrance (delay by index)
+- Skeleton loader (16:9 + content blocks)
+- Responsive grid: 1 col mobile / 2 sm / 3 md / 4 lg / 5 2xl (updated marketplace grid)
+
+**Admin locked landing page (/admin):** Created src/app/admin/page.tsx:
+- Locked gate screen: LogoMark + "RESTRICTED ACCESS" + "Admin Portal" heading + executive email/password fields + "Unlock Admin Access" button
+- Validates email against EXEC_EMAILS list (founder/ceo/director @playbeat.live) — rejects non-exec emails with "Access denied"
+- On success: calls /auth/login, verifies ADMIN role, sets user in store, renders AdminConsole
+- Authorized accounts hint box listing the 3 exec emails + password
+- Trust badges (Secure / Encrypted / Exec Only)
+- Show/hide password toggle
+- If already signed in as exec admin, shows AdminConsole directly
+
+**Routes:** Created /games, /giftcards, /admin as real Next.js routes:
+- /games → CategoryPage with category="games" (renders Marketplace filtered)
+- /giftcards → CategoryPage with category="gift-cards"
+- /admin → locked admin landing (above)
+- Created shared CategoryPage component (sets nav filter on mount, renders Header+Marketplace+Footer)
+- Moved Providers (QueryClientProvider) to root layout so all routes have query client access
+
+**Lemon Squeezy product listing:** Created /api/v1/lemon-squeezy/products route:
+- When LEMONSQUEEZY_API_KEY + LEMONSQUEEZY_STORE_ID are set: fetches real product catalog from LS API (GET https://api.lemonsqueezy.com/v1/products?filter[store_id]=...), returns items with name/slug/description/status/thumbnail/price/variants
+- When not configured: returns configured:false + empty items + message to set env vars
+- This enables filtering the storefront to only LS-listed products once the key is set
+- Note: no LS API key is currently in the environment — user needs to set LEMONSQUEEZY_API_KEY + LEMONSQUEEZY_STORE_ID in .env
+
+**Verification:**
+- All routes 200: / /admin /games /giftcards
+- VLM on product cards: 9/10 — "badges (Featured/Bestseller/discount), green Buy Now + cart icons, metadata chips (Instant/Digital/License), quick stats (Sales/Rating/Reviews), clean 16:9 thumbnails, vibrant colors, clear hierarchy, cohesive dark theme"
+- /admin: locked landing renders (Restricted Access / Admin Portal / exec email+pw / Unlock button). Exec login (founder@playbeat.live / playbeat123) → Admin Console appears with Users/Approvals/Settings/Audit tabs.
+- /games: "Filtered 4 results" (Starbound Tactics + games). /giftcards: "Filtered 4 results" (Steam Gift Card + gift cards).
+- WhatsApp: 0332 102 9333 confirmed in footer.
+- bun run lint: clean (0 errors).
+
+Stage Summary:
+- WhatsApp updated to 0332 102 9333. Product cards redesigned with full premium feature set (badges, metadata, Buy Now/Add to Cart/Quick View, quick stats, hover effects, 16:9 thumbnails, responsive 5/4/3/2/1 grid). Admin locked landing at /admin (exec-only: founder/ceo/director @playbeat.live / playbeat123). /games and /giftcards routes created. LS product listing route built (needs LEMONSQUEEZY_API_KEY env to activate). Lint clean, all routes 200, browser-verified.
