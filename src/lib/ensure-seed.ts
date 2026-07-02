@@ -1,30 +1,14 @@
 /**
- * Auto-seed guard.
+ * No-op seed guard.
  *
  * The storefront shows ONLY products from your Lemon Squeezy store (fetched
- * live via the LS API). Seeded products remain in the DB for analytics/admin
- * demo data but NEVER appear on the storefront.
+ * live via the LS API). It does NOT need the database to function.
  *
- * This function is wrapped in a resilient try/catch so DB connection issues
- * (e.g. Neon cold starts) never crash the server or block product fetching.
+ * The database is used only by admin/analytics routes. We intentionally do
+ * NOT seed or query the DB here so that DB connection issues (Neon cold
+ * starts, env loading delays) never block product fetching or crash the
+ * storefront.
  */
-let seedPromise: Promise<void> | null = null;
-
 export async function ensureSeeded(): Promise<void> {
-  if (seedPromise) return seedPromise;
-  seedPromise = (async () => {
-    try {
-      const { db } = await import("@/lib/db");
-      const { runSeed } = await import("@/lib/seed");
-      const count = await db.user.count();
-      if (count === 0) {
-        await runSeed();
-      }
-    } catch (e) {
-      // Reset so a later request can retry; never throw.
-      seedPromise = null;
-      console.error("[ensure-seed] skipped (non-fatal):", e);
-    }
-  })();
-  return seedPromise;
+  return;
 }
