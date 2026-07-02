@@ -250,7 +250,14 @@ function SignInDialog() {
           <span className="hidden sm:inline">Sign in</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="overflow-hidden border-pb-gold-border/40 bg-card p-0 sm:max-w-md">
+      <DialogContent className="relative overflow-hidden border-pb-gold-border/40 bg-card p-0 sm:max-w-md">
+        {/* Subtle brand accent image at the top of the dialog */}
+        <div
+          className="absolute inset-x-0 top-0 h-24 bg-cover bg-center opacity-25"
+          style={{ backgroundImage: "url(/brand/brand-2.jpg)" }}
+          aria-hidden="true"
+        />
+        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-card/40 to-card" aria-hidden="true" />
         {/* Logo + header */}
         <div className="flex flex-col items-center gap-3 px-6 pb-2 pt-8 text-center">
           <LogoMark size={56} />

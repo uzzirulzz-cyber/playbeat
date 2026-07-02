@@ -393,3 +393,41 @@ Work Log:
 
 Stage Summary:
 - Hero now has the uploaded video as a fixed background (absolute inset-0, object-cover) inside the section, with dark gradient overlays keeping all content readable. Works on mobile (playsInline + muted autoplay) and desktop. Content (eyebrow, headline, CTAs, stats, featured drops) overlays correctly without breaking. Lint clean, browser-verified.
+
+---
+Task ID: 13
+Agent: Main (Z.ai Code)
+Task: Place uploaded brand images as section backgrounds throughout the marketplace
+
+Work Log:
+- Analyzed all 7 uploaded images via VLM:
+  1. brand-1.jpg — "Thank You Jesus" graffiti, black/white, gritty
+  2. brand-2.jpg — woman smoking portrait, edgy, gray/orange/gold
+  3. brand-3.jpg — older man, artistic, rebellious, blues/pinks/yellows
+  4. brand-4.jpg — motivational quote, blue/black, playful
+  5. brand-5.jpg — woman on orange sports car, luxurious
+  6. brand-6.jpg — motivational quote, dark brown, silver text, spiritual
+  7. brand-7.jpg — tattooed dreadlocked figure, pink bg, bold/energetic
+- Copied all 7 to /public/brand/ (renamed to brand-1.jpg through brand-7.jpg).
+
+**Created BrandStrip component (src/components/playbeat/brand-strip.tsx):**
+- Reusable full-width strip: background image (bg-cover, bg-fixed parallax on desktop) + dark gradient overlay (light/medium/heavy intensity) + bottom fade + eyebrow + headline (with gold gradient segment) + description + green CTA button.
+- Framer Motion whileInView entrance. Left or center alignment.
+
+**Placed all 7 images as section backgrounds:**
+1. **Brand strip 1** (after Hero, before category section) — brand-5 (luxury car) — "Premium digital products. Instant delivery." / "Browse All Plans" CTA. Medium overlay.
+2. **Category section texture** — brand-1 (graffiti) as subtle bg (opacity 0.06) behind "Browse by category" heading.
+3. **Filter bar texture** — brand-4 (motivational blue) as ultra-subtle bg (opacity 0.04) in the filter card.
+4. **Brand strip 2** (after product grid) — brand-7 (bold pink) — "Trusted by 12,000+ customers worldwide." / "Explore Subscriptions" CTA. Heavy overlay, centered.
+5. **Brand strip 3** (after strip 2) — brand-3 (artistic man) — "Sell your digital products to the entire world." / "Become A Vendor" CTA. Heavy overlay.
+6. **Footer background** — brand-6 (dark spiritual) as bg-cover bg-fixed with 3 layers of dark overlay (gradient + solid) for readability.
+7. **Sign-in dialog accent** — brand-2 (edgy woman) as a subtle top accent strip (h-24, opacity 0.25, gradient fade to card) in the sign-in dialog.
+
+**Verification:**
+- All 7 images serve via HTTP 200 (/brand/brand-1.jpg through brand-7.jpg).
+- agent-browser: brand strip 1 renders ("Premium digital products. Instant delivery." + BROWSE ALL PLANS). Strip 2 renders ("Trusted by 12,000+ customers worldwide." + EXPLORE SUBSCRIPTIONS). Strip 3 renders ("Sell your digital products to the entire world." + BECOME A VENDOR). Footer bg present (brand-6). Category texture present (brand-1). Sign-in dialog accent present (brand-2).
+- VLM on brand strip 1: "woman on sports car visible... dark overlay improves readability... headline visible... green CTA present... readability 9/10."
+- bun run lint: clean (0 errors).
+
+Stage Summary:
+- All 7 uploaded brand images placed as section backgrounds: 3 full-width BrandStrip promos (luxury/community/vendor), footer background, category section texture, filter bar texture, sign-in dialog accent. Each has dark gradient overlays so text stays readable. Lint clean, all images serve 200, browser-verified.

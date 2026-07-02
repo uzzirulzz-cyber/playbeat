@@ -45,6 +45,7 @@ import {
 import { ProductCard, ProductCardSkeleton } from "./product-card";
 import { ProductCover } from "./product-cover";
 import { resolveIcon } from "./product-cover";
+import { BrandStrip } from "./brand-strip";
 import { usePlaybeatStore } from "@/lib/store";
 import {
   api,
@@ -418,7 +419,13 @@ function FilterBar({
     });
 
   return (
-    <Card className="bg-card/60 backdrop-blur">
+    <Card className="relative overflow-hidden bg-card/60 backdrop-blur">
+      {/* Subtle brand texture */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-[0.04]"
+        style={{ backgroundImage: "url(/brand/brand-4.jpg)" }}
+        aria-hidden="true"
+      />
       <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-end">
         <div className="flex-1 space-y-1.5">
           <Label className="text-xs text-muted-foreground">
@@ -584,12 +591,45 @@ export function Marketplace() {
     <div>
       <Hero />
 
-      <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
-        <div>
-          <h2 className="text-xl font-bold">Browse by category</h2>
-          <p className="text-sm text-muted-foreground">
-            Tap a category to filter the grid below.
-          </p>
+      {/* Brand strip 1 — luxury promo (after hero) */}
+      <BrandStrip
+        image="/brand/brand-5.jpg"
+        eyebrow="Premium Collection"
+        title={
+          <>
+            Premium digital products.{" "}
+            <span className="pb-text-gradient">Instant delivery.</span>
+          </>
+        }
+        description="From streaming subscriptions to AI tools and game keys — every product is verified, region-unlocked, and delivered to your inbox in under 60 seconds."
+        cta="Browse All Plans"
+        onCta={() => {
+          setNavFilter("", "popular");
+          setTimeout(
+            () =>
+              document
+                .querySelector("[data-product-grid]")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+            50,
+          );
+        }}
+        overlay="medium"
+      />
+
+      <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6" data-product-grid>
+        {/* Category section with subtle brand texture */}
+        <div className="relative -mx-4 overflow-hidden rounded-none px-4 py-6 sm:-mx-6 sm:rounded-xl sm:px-6">
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-[0.06]"
+            style={{ backgroundImage: "url(/brand/brand-1.jpg)" }}
+            aria-hidden="true"
+          />
+          <div className="relative">
+            <h2 className="text-xl font-bold">Browse by category</h2>
+            <p className="text-sm text-muted-foreground">
+              Tap a category to filter the grid below.
+            </p>
+          </div>
         </div>
         <CategoryPills
           selected={query.category || ""}
@@ -720,6 +760,49 @@ export function Marketplace() {
           </Pagination>
         )}
       </div>
+
+      {/* Brand strip 2 — community / social proof */}
+      <BrandStrip
+        image="/brand/brand-7.jpg"
+        eyebrow="Join The Movement"
+        title={
+          <>
+            Trusted by{" "}
+            <span className="pb-text-gradient">12,000+ customers</span>{" "}
+            worldwide.
+          </>
+        }
+        description="From Islamabad to Istanbul, New York to Nairobi — playbeat.digital powers digital commerce across 50+ platforms and every region. Secure checkout, instant delivery, 24/7 support."
+        cta="Explore Subscriptions"
+        onCta={() => {
+          setNavFilter("saas-subscriptions", "popular");
+          setTimeout(
+            () =>
+              document
+                .querySelector("[data-product-grid]")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+            50,
+          );
+        }}
+        overlay="heavy"
+        align="center"
+      />
+
+      {/* Brand strip 3 — seller / vendor CTA */}
+      <BrandStrip
+        image="/brand/brand-3.jpg"
+        eyebrow="For Creators & Vendors"
+        title={
+          <>
+            Sell your digital products to the{" "}
+            <span className="pb-text-gradient">entire world.</span>
+          </>
+        }
+        description="AI tools, software licenses, templates, courses, gift cards — list once, sell everywhere. Built-in payments via Lemon Squeezy, affiliate program, and vendor analytics. Keep 85% of every sale."
+        cta="Become A Vendor"
+        onCta={() => toast.message("Vendor sign-up — coming soon")}
+        overlay="heavy"
+      />
     </div>
   );
 }

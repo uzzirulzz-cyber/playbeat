@@ -132,8 +132,17 @@ export function Footer() {
   };
 
   return (
-    <footer className="mt-auto border-t border-border bg-card/40 backdrop-blur">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+    <footer className="relative mt-auto overflow-hidden border-t border-border">
+      {/* Brand background image with heavy dark overlay */}
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-fixed"
+        style={{ backgroundImage: "url(/brand/brand-6.jpg)" }}
+        aria-hidden="true"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/92 to-background/98" />
+      <div className="absolute inset-0 bg-background/60" />
+
+      <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4 lg:grid-cols-5">
           {/* Brand + newsletter */}
           <div className="col-span-2 md:col-span-1 lg:col-span-2">
