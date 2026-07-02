@@ -268,31 +268,30 @@ export function Footer() {
             © 2026 PlayBeat.Digital. All rights reserved.
           </p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-            <button
-              onClick={() => toast.message("Privacy — coming soon")}
+            <a
+              href="/privacy"
               className="transition-colors hover:text-primary"
             >
               Privacy
-            </button>
-            <button
-              onClick={() => toast.message("Terms — coming soon")}
+            </a>
+            <a
+              href="/terms"
               className="transition-colors hover:text-primary"
             >
               Terms
-            </button>
-            <button
-              onClick={() => toast.message("Refund Policy — coming soon")}
+            </a>
+            <a
+              href="/refund-policy"
               className="transition-colors hover:text-primary"
             >
               Refund Policy
-            </button>
-            <Badge
-              variant="outline"
-              className="cursor-pointer text-[10px] hover:text-primary"
-              onClick={() => toast.message("Admin access requires sign-in")}
+            </a>
+            <a
+              href="/admin"
+              className="cursor-pointer text-[10px] uppercase transition-colors hover:text-primary"
             >
               Admin
-            </Badge>
+            </a>
           </div>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" aria-label="GitHub" asChild>
