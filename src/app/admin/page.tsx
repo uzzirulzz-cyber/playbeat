@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import {
   Lock,
   Shield,
-  Mail,
   KeyRound,
   ArrowRight,
   Loader2,
@@ -26,27 +25,31 @@ import { usePlaybeatStore } from "@/lib/store";
 import { toast } from "sonner";
 
 /**
- * Executive admin accounts — embedded directly in the code so the admin
- * portal works even when the database is unreachable (Neon cold starts).
+ * Executive admin access — credentials embedded directly in the code.
  *
- * The portal first tries the API login (DB-backed). If that fails (DB down,
- * network error), it falls back to these embedded credentials.
+ * The portal unlocks with a single password. No email field, no visible
+ * credentials, no database dependency. The first exec account is used by
+ * default when unlocking via the embedded password.
  */
-const EXEC_ACCOUNTS = [
-  { email: "founder@playbeat.live", password: "playbeat123", name: "Founder", role: "ADMIN" },
-  { email: "ceo@playbeat.live", password: "playbeat123", name: "CEO", role: "ADMIN" },
-  { email: "director@playbeat.live", password: "playbeat123", name: "Director", role: "ADMIN" },
-];
+const ADMIN_PASSWORD = "playbeat123";
+const EXEC_ACCOUNT = {
+  email: "founder@playbeat.live",
+  name: "Founder",
+  role: "ADMIN",
+};
 
-const EXEC_EMAILS = EXEC_ACCOUNTS.map((a) => a.email);
+// All exec accounts (used when the DB is reachable, to try real login)
+const EXEC_ACCOUNTS = [
+  { email: "founder@playbeat.live", password: "playbeat123", name: "Founder" },
+  { email: "ceo@playbeat.live", password: "playbeat123", name: "CEO" },
+  { email: "director@playbeat.live", password: "playbeat123", name: "Director" },
+];
 
 export default function AdminPage() {
   const user = usePlaybeatStore((s) => s.user);
   const setUser = usePlaybeatStore((s) => s.setUser);
 
-  const isExecAdmin =
-    user?.role === "ADMIN" &&
-    EXEC_EMAILS.includes(user.email.toLowerCase());
+  const isExecAdmin = user?.role === "ADMIN";
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -71,7 +74,6 @@ export default function AdminPage() {
 }
 
 function AdminLock({ onUnlock }: { onUnlock: (u: any) => void }) {
-  const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [showPw, setShowPw] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
@@ -81,48 +83,37 @@ function AdminLock({ onUnlock }: { onUnlock: (u: any) => void }) {
     e.preventDefault();
     setError("");
 
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!EXEC_EMAILS.includes(normalizedEmail)) {
-      setError("Access denied. This portal is restricted to executive accounts. Use one of the authorized emails listed below.");
-      return;
-    }
     if (!password) {
       setError("Password is required.");
       return;
     }
 
+    if (password !== ADMIN_PASSWORD) {
+      setError("Incorrect password. Access denied.");
+      return;
+    }
+
     setLoading(true);
 
-    // 1. Try the API login first (DB-backed)
+    // 1. Try the API login with the first exec account (DB-backed)
     try {
-      const { user } = await api.login(normalizedEmail, password);
-      if (user.role !== "ADMIN") {
-        setError("This account does not have admin access.");
+      const { user } = await api.login(EXEC_ACCOUNT.email, ADMIN_PASSWORD);
+      if (user.role === "ADMIN") {
+        onUnlock(user);
         setLoading(false);
         return;
       }
-      onUnlock(user);
-      setLoading(false);
-      return;
     } catch {
-      // API login failed (DB down, network error) — fall back to embedded check
+      // API login failed (DB down, network error) — fall back to embedded
     }
 
-    // 2. Fallback: verify against embedded credentials
-    const account = EXEC_ACCOUNTS.find(
-      (a) => a.email === normalizedEmail && a.password === password,
-    );
-
-    if (account) {
-      onUnlock({
-        id: `exec_${account.email}`,
-        name: account.name,
-        email: account.email,
-        role: account.role,
-      });
-    } else {
-      setError("Invalid password. The password is: playbeat123");
-    }
+    // 2. Fallback: unlock with embedded credentials (no DB needed)
+    onUnlock({
+      id: `exec_${EXEC_ACCOUNT.email}`,
+      name: EXEC_ACCOUNT.name,
+      email: EXEC_ACCOUNT.email,
+      role: EXEC_ACCOUNT.role,
+    });
     setLoading(false);
   };
 
@@ -130,7 +121,7 @@ function AdminLock({ onUnlock }: { onUnlock: (u: any) => void }) {
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-md"
+      className="w-full max-w-sm"
     >
       <div className="relative overflow-hidden rounded-2xl border border-accent/30 bg-card/80 pb-card-glow backdrop-blur-xl">
         {/* Top accent bar */}
@@ -150,34 +141,16 @@ function AdminLock({ onUnlock }: { onUnlock: (u: any) => void }) {
               Admin Portal
             </h1>
             <p className="max-w-xs text-sm text-muted-foreground">
-              This area is locked. Sign in with an executive account to manage
-              the platform.
+              Enter the admin password to access the platform management
+              console.
             </p>
           </div>
 
-          {/* Form */}
+          {/* Form — password only, no email field, no visible credentials */}
           <form onSubmit={handleSubmit} className="mt-7 space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="admin-email" className="text-xs font-medium">
-                Executive Email
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="admin-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="founder@playbeat.live"
-                  className="h-11 pl-9"
-                  autoComplete="email"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
               <Label htmlFor="admin-pw" className="text-xs font-medium">
-                Password
+                Admin Password
               </Label>
               <div className="relative">
                 <KeyRound className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -189,6 +162,7 @@ function AdminLock({ onUnlock }: { onUnlock: (u: any) => void }) {
                   placeholder="••••••••"
                   className="h-11 pl-9 pr-9"
                   autoComplete="current-password"
+                  autoFocus
                 />
                 <button
                   type="button"
@@ -227,22 +201,6 @@ function AdminLock({ onUnlock }: { onUnlock: (u: any) => void }) {
               )}
             </Button>
           </form>
-
-          {/* Login details — shown so the user knows exactly what to enter */}
-          <div className="mt-6 rounded-lg border border-accent/20 bg-accent/5 p-3">
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
-              <ShieldCheck className="size-3 text-accent" />
-              Authorized Login Details
-            </div>
-            <div className="mt-1.5 space-y-0.5 font-mono text-[10px] text-muted-foreground">
-              <div>founder@playbeat.live</div>
-              <div>ceo@playbeat.live</div>
-              <div>director@playbeat.live</div>
-              <div className="pt-1 text-foreground/70">
-                Password: playbeat123
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
