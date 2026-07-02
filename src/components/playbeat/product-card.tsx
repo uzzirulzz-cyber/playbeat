@@ -29,7 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { ProductCover } from "./product-cover";
 import { StarRating } from "./star-rating";
 import { usePlaybeatStore } from "@/lib/store";
-import { formatPrice, type Product } from "@/lib/api-client";
+import { formatPrice, displayProductPrice, type Product } from "@/lib/api-client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -316,11 +316,9 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
               <span className="text-lg font-extrabold leading-none text-foreground">
                 {isFree
                   ? "Free"
-                  : product.priceFormatted
-                    ? product.priceFormatted
-                    : formatPrice(product.effectivePrice, currency)}
+                  : displayProductPrice(product, currency)}
               </span>
-              {product.discountPrice !== null && product.discountPercent > 0 && (
+              {product.discountPrice !== null && product.discountPercent > 0 && !product.priceFormatted && (
                 <div className="mt-1 flex items-center gap-1.5">
                   <span className="text-[11px] text-muted-foreground line-through">
                     {formatPrice(product.price, currency)}

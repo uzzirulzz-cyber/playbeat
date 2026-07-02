@@ -585,3 +585,25 @@ Work Log:
 
 Stage Summary:
 - Privacy, Terms, and Refund Policy pages are live with full legal content (Playbeat Digital, Pakistan, Lemon Squeezy, PKR, WhatsApp 0332 102 9333). Footer links updated. Database switched from SQLite to Neon PostgreSQL (all data migrated, 17 users + 48 orders + analytics data). Storefront still shows only LS products. Lint clean, all routes 200, browser-verified.
+
+---
+Task ID: 18
+Agent: Main (Z.ai Code)
+Task: Fix price display — LS prices are in PKR (store currency), not USD
+
+Work Log:
+- Bug: Lemon Squeezy product "Netlix" has price 480 (PKR, store 420060 is a Pakistan/PKR store). The code was treating 480 as USD and converting via formatPrice() → 480 × 280 = Rs 134,400 (wrong). The correct LS priceFormatted is "PKR480/month".
+- Created displayProductPrice() helper in api-client.ts: if product.priceFormatted exists (LS product), use it directly; otherwise fall back to formatPrice() (for DB-seeded analytics products).
+- Updated all price displays to use displayProductPrice():
+  - marketplace.tsx hero featured cards (was formatPrice → now displayProductPrice)
+  - product-card.tsx (was inline priceFormatted check → now displayProductPrice for consistency)
+  - product-detail-sheet.tsx price block (was formatPrice → now displayProductPrice)
+  - Strikethrough original price: guarded with !priceFormatted so LS products don't show a bogus strikethrough
+- Cart sheet: LS products redirect to LS checkout (Buy Now → buyNowUrl), so cart is for non-LS products only — no change needed there.
+
+**Verification:**
+- agent-browser: product card shows "PKR480/month" (was "Rs 134,400"). Hero featured shows "PKR480/month". Product detail sheet shows "PKR480/month". No "Rs 134,400" anywhere.
+- bun run lint: clean.
+
+Stage Summary:
+- Price bug fixed. LS products now display their real LS-formatted price (e.g. "PKR480/month") everywhere — product cards, hero featured, detail sheet. No double-conversion. The displayProductPrice() helper ensures LS prices (already in the store's currency) are never run through formatPrice() which assumes USD. Lint clean, browser-verified.

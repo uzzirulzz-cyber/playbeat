@@ -442,6 +442,25 @@ export function detectCurrency(): Currency {
   }
 }
 
+/**
+ * Display a product's price correctly.
+ *
+ * Lemon Squeezy products already have their price in the store's currency
+ * (e.g. PKR for the Pakistan store) and include a `priceFormatted` string
+ * from the LS API (e.g. "PKR480/month"). We MUST use that directly — never
+ * run it through formatPrice() which assumes the input is USD.
+ *
+ * For DB-seeded products (analytics only), use formatPrice() with the
+ * display currency.
+ */
+export function displayProductPrice(
+  product: { priceFormatted?: string | null; effectivePrice: number },
+  currency: Currency = "USD",
+): string {
+  if (product.priceFormatted) return product.priceFormatted;
+  return formatPrice(product.effectivePrice, currency);
+}
+
 export function formatDate(iso: string): string {
   try {
     return new Intl.DateTimeFormat("en-US", {

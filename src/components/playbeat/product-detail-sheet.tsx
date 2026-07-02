@@ -37,6 +37,7 @@ import { usePlaybeatStore } from "@/lib/store";
 import {
   api,
   formatPrice,
+  displayProductPrice,
   formatDate,
   type Review,
 } from "@/lib/api-client";
@@ -233,10 +234,11 @@ export function ProductDetailSheet() {
                   <span className="text-3xl font-bold text-foreground">
                     {product.effectivePrice === 0
                       ? "Free"
-                      : formatPrice(product.effectivePrice, currency)}
+                      : displayProductPrice(product, currency)}
                   </span>
                   {product.discountPrice !== null &&
-                    product.discountPercent > 0 && (
+                    product.discountPercent > 0 &&
+                    !product.priceFormatted && (
                       <>
                         <span className="text-base text-muted-foreground line-through">
                           {formatPrice(product.price, currency)}

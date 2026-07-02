@@ -50,6 +50,7 @@ import { usePlaybeatStore } from "@/lib/store";
 import {
   api,
   formatPrice,
+  displayProductPrice,
   type Product,
   type ProductQuery,
 } from "@/lib/api-client";
@@ -311,9 +312,9 @@ function Hero() {
                           <span className="text-base font-bold text-accent">
                             {p.effectivePrice === 0
                               ? "Free"
-                              : formatPrice(p.effectivePrice, currency)}
+                              : displayProductPrice(p, currency)}
                           </span>
-                          {p.discountPrice !== null && (
+                          {p.discountPrice !== null && !p.priceFormatted && (
                             <span className="text-[11px] text-muted-foreground line-through">
                               {formatPrice(p.price, currency)}
                             </span>
