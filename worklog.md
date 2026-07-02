@@ -323,3 +323,45 @@ Work Log:
 
 Stage Summary:
 - Rebranded to playbeat identity: custom SVG logo (navy + gold + silver, P with play triangle + sound waves), lowercase "playbeat" wordmark (silver/gold/silver), deep navy theme. Sign-in dialog redesigned to match reference (logo top, Welcome back, icon fields, green CTA, trust badges). Lint clean, browser-verified.
+
+---
+Task ID: 11
+Agent: Main (Z.ai Code)
+Task: Rebuild hero from playbeat.digital reference + rebrand product showcase
+
+Work Log:
+- Fetched playbeat.live → 404 (not a live site). Fetched playbeat.digital (the actual live reference, 366KB HTML) via web-reader. Extracted hero structure:
+  - Eyebrow: "WORLDWIDE DIGITAL SUBSCRIPTIONS"
+  - H1: "The gateway to digital heaven."
+  - Subtext: "Every streaming service, gaming pass, AI tool & cloud plan — from every platform, for every region. One store. Every service. No borders."
+  - CTAs: "EXPLORE SUBSCRIPTIONS →" + "BROWSE ALL PLANS"
+  - Stats: 500+ Subscriptions · 50+ Platforms · Global Access · <60s Delivery
+
+**Hero rebuild (marketplace.tsx):**
+- Left-aligned layout (matches playbeat.digital, not centered).
+- Eyebrow pill: gold border + gold bg + pulsing gold dot + "WORLDWIDE DIGITAL SUBSCRIPTIONS" uppercase tracking.
+- Headline: "The gateway to digital heaven." — 7xl extrabold, "digital heaven." in gold gradient (pb-text-gradient).
+- Subtext: full playbeat.digital copy ("Every streaming service... No borders.").
+- Two CTAs: green "Explore Subscriptions →" (filters to saas-subscriptions + scrolls) + outline "Browse All Plans" (gold border, clears filter + scrolls).
+- Stats row: 4 blocks (500+ Subscriptions / 50+ Platforms / Global Access / <60s Delivery) with staggered Framer Motion entrance.
+- Background: pb-grid + pb-glow + gold + green blur orbs.
+- Removed old centered hero (trust badges, search bar, quick category chips, 3-card showcase) — replaced with the playbeat.digital structure.
+
+**Product showcase rebrand:**
+- Section header: "Featured drops" + "Hand-picked products, live right now." + "View all →" link.
+- 4-card grid (lg:grid-cols-4, was 3) — rebranded card design:
+  - Custom rounded container (not shadcn Card) with pb-card-glow shadow.
+  - aspect-[5/4] cover with gradient overlay (from-card/80 to transparent) for depth.
+  - Type badge (top-left, bg-background/80 backdrop blur) + discount % badge (gold).
+  - Verified badge (bottom-right, bg-background/80 + ShieldCheck icon) when vendor verified.
+  - Vendor row (Store icon + storeName), title (line-clamp-1), price row (gold bold + strikethrough + gold star rating).
+  - Hover: border-accent/40 + shadow-xl + y:-4 lift.
+  - Gold accent color for prices (text-accent) to match brand identity.
+
+**Verification:**
+- VLM: "eyebrow badge present... headline 'The gateway to digital heaven.' prominent with 'digital heaven' in bold yellow... two CTAs (green + dark)... 4 stats (500+, 50+, Global, <60s)... Featured drops section with product cards... 8/10 premium."
+- agent-browser: hero renders with eyebrow, headline, 2 CTAs, 4 stats, 4 featured cards (VoxAI, PixelForge, SheetFlow, Stripe Connect — all with Verified badges + gold prices). "Explore Subscriptions" CTA filters grid to "Filtered 4 results" (SaaS subscriptions). "Browse All Plans" clears filter.
+- bun run lint: clean. Dev log all 200s.
+
+Stage Summary:
+- Hero now matches playbeat.digital: left-aligned, eyebrow "WORLDWIDE DIGITAL SUBSCRIPTIONS", headline "The gateway to digital heaven.", 2 CTAs, 4 stats (500+/50+/Global/<60s). Product showcase rebranded: 4-card "Featured drops" grid with custom navy/gold cards, gradient overlays, verified badges, gold prices. Lint clean, browser-verified.
