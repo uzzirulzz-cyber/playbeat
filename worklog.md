@@ -633,3 +633,28 @@ Work Log:
 
 Stage Summary:
 - Admin panel no longer exposes exec credentials. 66-product list generated (CSV + markdown) for manual Lemon Squeezy dashboard entry — sourced from playbeatdigital.world + G2G market rates, +10% markup, PKR pricing. LS API limitation documented (no programmatic product creation). Files in repo root: lemon-squeezy-products.csv + .md.
+
+---
+Task ID: 20
+Agent: Main (Z.ai Code)
+Task: Verify storefront shows ONLY Lemon Squeezy products (never random/seeded)
+
+Work Log:
+- Verified the complete product pipeline:
+  1. /api/v1/products route → calls getLemonSqueezyProducts() → fetches from LS API only. No DB product queries.
+  2. getLemonSqueezyProducts() in lemon-squeezy.ts → if LS API returns error (401/500/etc), returns {configured:true, items:[]} (EMPTY — never falls back to DB/seeded products).
+  3. ensure-seed.ts → creates users/coupons/orders in DB for analytics, but the storefront NEVER queries DB products.
+  4. The storefront code path: storefront → /api/v1/products → getLemonSqueezyProducts() → LS API. No other source.
+- Confirmed via grep: no `db.product.findMany` or `prisma.*product` in the products route — only LS fetch.
+- LS API key status: returned 401 Unauthorized on direct test (key may have expired or been revoked after earlier exposure). The storefront still shows 1 product ("Netlix") from the 60-second cache. When cache expires and LS returns 401, storefront will show 0 products (empty state) — never random products.
+- agent-browser verification: storefront shows "All products 1 result" — only "Netlix" (PKR480/month) from LS. No random/seeded products visible.
+
+**CRITICAL: The LS API key returns 401 Unauthorized.**
+The key (eyJ0eXAi...) in .env has expired or been revoked. To restore product fetching:
+1. Go to https://app.lemonsqueezy.com/settings/api
+2. Generate a new API key
+3. Update LEMONSQUEEZY_API_KEY in .env with the new key
+4. Restart the dev server
+
+Stage Summary:
+- Storefront is correctly wired to show ONLY Lemon Squeezy products. Verified: no DB products appear, no random products, empty state on LS failure. The LS API key is returning 401 (expired/revoked) — user needs to generate a new key from the LS dashboard and update .env. Once restored, any products added in the LS dashboard will appear on the storefront within 60 seconds.
