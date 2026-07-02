@@ -684,3 +684,23 @@ Work Log:
 
 Stage Summary:
 - New LS API key set. 10 real products from your Lemon Squeezy store now appear on the storefront: Apple TV, ChatGPT Plus, Claude Pro, Crunchyroll, Disney+ Premium, HBO Max, MAXstream, Midjourney, Netflix Premium, Prime Video. All with correct PKR prices. No random products — only what you've added in Lemon Squeezy. To add more, create them in the LS dashboard and they appear within 60 seconds.
+
+---
+Task ID: 22
+Agent: Main (Z.ai Code)
+Task: Add Meta Pixel (Facebook Pixel ID 489762161686775) for ad tracking
+
+Work Log:
+- Created src/components/playbeat/meta-pixel.tsx: uses next/script (afterInteractive strategy) to inject fbevents.js, init pixel with ID 489762161686775, track PageView. Includes noscript fallback img. Exports trackMetaEvent helper.
+- Added MetaPixel to root layout (src/app/layout.tsx) — loads site-wide on every page.
+- Event tracking wired into key user flows:
+  - PageView: automatic on every page load (in pixel init)
+  - ViewContent: when product detail sheet opens (product-detail-sheet.tsx useEffect) — sends content_name, content_ids, value, currency
+  - AddToCart: when user adds product to cart (product-card.tsx handleAddToCart) — sends content_name, content_ids, value, currency
+  - InitiateCheckout: when user clicks Buy Now (product-card.tsx handleBuyNow) — sends content_name, content_ids, value, currency
+  - Purchase: on successful order completion (cart-sheet.tsx placeOrder) — sends value, currency, content_type, contents array with product IDs + quantities + item prices
+- Made notifications route resilient (try/catch returning empty items on DB error) to prevent Neon cold-start crashes from breaking the page.
+- Verified: pixel ID 489762161686775 present in served HTML. bun run lint clean. Pushed to GitHub.
+
+Stage Summary:
+- Meta Pixel (489762161686775) is live on the PlayBeat storefront. Tracks PageView (all pages), ViewContent (product views), AddToCart, InitiateCheckout, and Purchase events with product + value data. Ready for Facebook/Instagram ad attribution. Verify in Meta Events Manager (https://business.facebook.com/events_manager) after visiting the site.
