@@ -4,13 +4,8 @@ import { db } from "@/lib/db";
  * Lemon Squeezy product sync.
  *
  * The storefront shows ONLY products listed in your Lemon Squeezy store.
- * When LEMONSQUEEZY_API_KEY + LEMONSQUEEZY_STORE_ID are configured, we fetch
- * the live catalog from the LS API and map each product to the storefront
- * shape. When the key is not set, we return an empty list (the UI shows a
- * "connect Lemon Squeezy" state).
- *
- * No random/seeded products are shown — only what you have listed in Lemon
- * Squeezy.
+ * We fetch the live catalog from the LS API and map each product to the
+ * storefront shape, using the real product image, price, and checkout URL.
  */
 
 interface LSAttribute {
@@ -19,9 +14,14 @@ interface LSAttribute {
   description?: string | null;
   status?: string;
   thumb_url?: string | null;
-  sort_price?: number | null;
-  variants_count?: number;
+  large_thumb_url?: string | null;
+  price?: number | null;
+  price_formatted?: string | null;
+  buy_now_url?: string | null;
   test_mode?: boolean;
+  from_price?: number | null;
+  to_price?: number | null;
+  store_id?: number;
 }
 
 interface LSProduct {
@@ -50,10 +50,11 @@ export interface StorefrontProduct {
   sku: string;
   stock: number | null;
   cover: {
-    type: "gradient";
-    colors: [string, string];
-    icon: string;
-    seed: string;
+    type: "gradient" | "image";
+    colors?: [string, string];
+    icon?: string;
+    seed?: string;
+    image?: string;
   };
   tags: string[];
   licenseType: string | null;
@@ -83,12 +84,26 @@ export interface StorefrontProduct {
   discountPercent: number;
   createdAt: string;
   updatedAt: string;
+  buyNowUrl?: string | null;
+  priceFormatted?: string | null;
 }
 
 const LS_API_BASE = "https://api.lemonsqueezy.com/v1";
 
-// Fallback gradient + icon for LS products (we don't have per-product art yet)
+// Fallback gradient for LS products without an image
 const LS_GRADIENT: [string, string] = ["#0ea5e9", "#0369a1"];
+
+/** Strip HTML tags from a string */
+function stripHtml(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 export function isLemonSqueezyConfigured(): boolean {
   return Boolean(
@@ -112,16 +127,17 @@ export async function getLemonSqueezyProducts(): Promise<{
   }
 
   try {
-    const res = await fetch(
-      `${LS_API_BASE}/products?filter[store_id]=${storeId}&per_page=100`,
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          Accept: "application/vnd.api+json",
-        },
-        next: { revalidate: 60 },
+    const url = new URL(`${LS_API_BASE}/products`);
+    url.searchParams.set("filter[store_id]", storeId);
+    url.searchParams.set("per_page", "100");
+
+    const res = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        Accept: "application/vnd.api+json",
       },
-    );
+      next: { revalidate: 60 },
+    });
 
     const json: LSResponse = await res.json();
     if (!res.ok) {
@@ -132,66 +148,60 @@ export async function getLemonSqueezyProducts(): Promise<{
       return { configured: true, items: [] };
     }
 
-    // Find a "Lemon Squeezy" vendor if one exists, else leave vendor null
-    const lsVendor = await db.vendor.findFirst({
-      where: { storeName: { contains: "Lemon" } },
-    });
-
+    // Detect the store currency (LS prices are in the store's default currency)
+    // Store 420060 = PKR. We use the price_formatted hint to detect currency.
     const items: StorefrontProduct[] = (json.data || []).map((p) => {
       const attrs = p.attributes;
-      const price = attrs.sort_price ? attrs.sort_price / 100 : 0;
+      const rawPrice = attrs.price ?? 0;
+      // LS prices are in cents
+      const price = rawPrice / 100;
       const slug = attrs.slug || attrs.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      const description = attrs.description ? stripHtml(attrs.description) : attrs.name;
+      const image = attrs.large_thumb_url || attrs.thumb_url || null;
+      const isSubscription = !!attrs.price_formatted?.includes("/");
+      // Detect currency from price_formatted (e.g. "PKR480/month")
+      const currency = attrs.price_formatted?.startsWith("PKR") ? "PKR" : "USD";
+
       return {
         id: `ls_${p.id}`,
         title: attrs.name,
         slug,
-        shortDescription: attrs.description
-          ? attrs.description.slice(0, 120)
-          : null,
-        description: attrs.description ?? attrs.name,
-        type: "DIGITAL_DOWNLOAD",
+        shortDescription: description.slice(0, 140) || null,
+        description,
+        type: isSubscription ? "SAAS_SUBSCRIPTION" : "DIGITAL_DOWNLOAD",
         status: attrs.status === "published" ? "PUBLISHED" : "DRAFT",
         price,
         discountPrice: null,
-        currency: "USD",
+        currency,
         sku: `LS-${p.id}`,
         stock: null,
-        cover: {
-          type: "gradient",
-          colors: LS_GRADIENT,
-          icon: "CreditCard",
-          seed: slug,
-        },
+        cover: image
+          ? { type: "image", image }
+          : { type: "gradient", colors: LS_GRADIENT, icon: "CreditCard", seed: slug },
         tags: ["lemon-squeezy"],
-        licenseType: "Lemon Squeezy license",
+        licenseType: isSubscription ? "Subscription" : "Digital product",
         downloadFile: null,
         fileSize: null,
         version: null,
         changelog: [],
-        featured: false,
+        featured: true,
         rating: 5,
         reviewCount: 0,
         salesCount: 0,
-        vendor: lsVendor
-          ? {
-              id: lsVendor.id,
-              storeName: lsVendor.storeName,
-              slug: lsVendor.slug,
-              verified: lsVendor.verified,
-              rating: lsVendor.rating,
-            }
-          : {
-              id: "lemon-squeezy",
-              storeName: "Lemon Squeezy",
-              slug: "lemon-squeezy",
-              verified: true,
-              rating: 5,
-            },
+        vendor: {
+          id: "lemon-squeezy",
+          storeName: "Playbeat Digital",
+          slug: "playbeat-digital",
+          verified: true,
+          rating: 5,
+        },
         category: null,
         effectivePrice: price,
         discountPercent: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        buyNowUrl: attrs.buy_now_url ?? null,
+        priceFormatted: attrs.price_formatted ?? null,
       };
     });
 

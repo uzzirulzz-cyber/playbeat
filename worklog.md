@@ -516,3 +516,38 @@ Work Log:
 
 Stage Summary:
 - Storefront now shows ONLY Lemon Squeezy products. No random/seeded products appear. When LS is not connected (current state — no API key in env), the storefront shows a "Connect Lemon Squeezy" empty state with instructions. User needs to add LEMONSQUEEZY_API_KEY + LEMONSQUEEZY_STORE_ID to .env to show their real catalog. Lint clean, browser-verified.
+
+---
+Task ID: 16
+Agent: Main (Z.ai Code)
+Task: Connect real Lemon Squeezy store + stop random products + remove vendors
+
+Work Log:
+- Decoded the provided LS API key (JWT). The `aud` claim (94d59cef-...) is the OAuth client ID, NOT the store ID. Called GET /v1/stores to find the real store: ID 420060, "Playbeat digital pvt ltd", Pakistan, PKR currency, slug "playbeatdigital".
+- Set .env: LEMONSQUEEZY_API_KEY=(full JWT) + LEMONSQUEEZY_STORE_ID=420060.
+- Stopped random product seeding: rewrote ensure-seed.ts as a no-op (no products created in DB). The storefront fetches ONLY from Lemon Squeezy.
+- Removed all vendor functionality:
+  - Removed "Become a Vendor" brand strip from marketplace.
+  - Removed "vendor" tab from TABS array in header.tsx.
+  - Removed VENDOR from visibleTabs() in store.ts (only CUSTOMER→marketplace, ADMIN→marketplace/affiliate/analytics/admin).
+  - Removed VendorStudio import + case from page.tsx.
+- Updated lemon-squeezy.ts to use real LS product fields:
+  - attributes.price (in cents) / 100 → price
+  - attributes.large_thumb_url / thumb_url → cover image (type:"image")
+  - attributes.buy_now_url → buyNowUrl (redirects to LS hosted checkout)
+  - attributes.price_formatted → priceFormatted (e.g. "PKR480/month")
+  - attributes.description → stripped of HTML → description
+  - Detects subscription from price_formatted containing "/"
+  - Detects currency from price_formatted (PKR prefix → PKR)
+- Updated ProductCover to support type:"image" covers (renders <img> with the LS thumbnail).
+- Updated ProductCard Buy Now button: when product.buyNowUrl is set, opens the LS hosted checkout in a new tab (instead of internal cart).
+- Updated ProductCard price display: uses product.priceFormatted directly when available (shows "PKR480/month" from LS, not a converted $ amount).
+- Added buyNowUrl? and priceFormatted? to the Product interface.
+
+**Verification:**
+- curl GET /api/v1/products → configured:true, total:1, product "Netlix" with priceFormatted "PKR480/month", buyNowUrl "https://playbeatdigital.lemonsqueezy.com/checkout/buy/bd4d3366-...", cover type "image" from LS CDN.
+- agent-browser: storefront shows 1 product "Netlix" (SAAS SUBSCRIPTION, Verified, Playbeat Digital, PKR480/month) with Buy Now / Add to Cart / Quick View buttons. No random products. No vendor UI.
+- bun run lint: clean (0 errors).
+
+Stage Summary:
+- Storefront now shows ONLY the real Lemon Squeezy product(s) from your store (Playbeat digital pvt ltd, store 420060). Currently 1 product: "Netlix" at PKR480/month. Buy Now redirects to the LS hosted checkout. No random/seeded products. No vendor system (removed Become a Vendor strip, Vendor Studio tab, vendor role). To add more products, list them in your Lemon Squeezy dashboard — they'll appear automatically. Lint clean, browser-verified.

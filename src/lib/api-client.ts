@@ -3,10 +3,11 @@
 // ===== Types =====
 
 export interface ProductCover {
-  type: "gradient";
-  colors: [string, string];
-  icon: string;
-  seed: string;
+  type: "gradient" | "image";
+  colors?: [string, string];
+  icon?: string;
+  seed?: string;
+  image?: string;
 }
 
 export interface VendorRef {
@@ -55,6 +56,8 @@ export interface Product {
   discountPercent: number;
   createdAt: string;
   updatedAt: string;
+  buyNowUrl?: string | null;
+  priceFormatted?: string | null;
 }
 
 export interface Category {

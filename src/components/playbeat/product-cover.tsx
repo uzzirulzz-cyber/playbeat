@@ -69,6 +69,28 @@ export function ProductCover({
   rounded = "rounded-xl",
 }: ProductCoverProps) {
   const parsed = parseCover(cover);
+
+  // Image cover (Lemon Squeezy products with a real thumbnail)
+  if (parsed?.type === "image" && parsed.image) {
+    return (
+      <div
+        className={cn(
+          "relative flex items-center justify-center overflow-hidden bg-muted",
+          rounded,
+          className,
+        )}
+      >
+        <img
+          src={parsed.image}
+          alt=""
+          className="size-full object-cover"
+          loading="lazy"
+        />
+      </div>
+    );
+  }
+
+  // Gradient cover (fallback)
   const IconComp = resolveIcon(parsed?.icon);
   const c1 = parsed?.colors?.[0] || "#10b981";
   const c2 = parsed?.colors?.[1] || "#0d9488";

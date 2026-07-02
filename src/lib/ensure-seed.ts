@@ -1,22 +1,15 @@
-import { db } from "@/lib/db";
-import { runSeed } from "@/lib/seed";
-
-// Auto-seed guard: ensures the database has demo data on first request.
-let seedPromise: Promise<void> | null = null;
-
+/**
+ * Auto-seed guard.
+ *
+ * The storefront shows ONLY products from your Lemon Squeezy store (fetched
+ * live via the LS API). We do NOT seed random products into the database —
+ * only what you list in Lemon Squeezy appears on the storefront.
+ *
+ * This function is kept as a no-op so existing API routes that call
+ * ensureSeeded() still work without error, but no demo products are ever
+ * created.
+ */
 export async function ensureSeeded(): Promise<void> {
-  if (seedPromise) return seedPromise;
-  seedPromise = (async () => {
-    try {
-      const count = await db.product.count();
-      if (count === 0) {
-        await runSeed();
-      }
-    } catch (e) {
-      // Reset promise so a later request can retry
-      seedPromise = null;
-      console.error("[ensure-seed] failed:", e);
-    }
-  })();
-  return seedPromise;
+  // Intentionally empty — no random products.
+  return;
 }

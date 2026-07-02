@@ -113,6 +113,11 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
       toast.info("This is an affiliate offer — use your referral link instead.");
       return;
     }
+    // Lemon Squeezy products redirect to the LS hosted checkout
+    if (product.buyNowUrl) {
+      window.open(product.buyNowUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
     addToCart(product);
     setCartOpen(true);
   };
@@ -309,7 +314,11 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
           <div className="flex items-end justify-between gap-2">
             <div className="flex flex-col">
               <span className="text-lg font-extrabold leading-none text-foreground">
-                {isFree ? "Free" : formatPrice(product.effectivePrice, currency)}
+                {isFree
+                  ? "Free"
+                  : product.priceFormatted
+                    ? product.priceFormatted
+                    : formatPrice(product.effectivePrice, currency)}
               </span>
               {product.discountPrice !== null && product.discountPercent > 0 && (
                 <div className="mt-1 flex items-center gap-1.5">

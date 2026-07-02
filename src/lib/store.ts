@@ -30,9 +30,8 @@ export type TabKey =
  */
 export function visibleTabs(role: string | undefined | null): TabKey[] {
   if (!role || role === "CUSTOMER") return ["marketplace"];
-  if (role === "VENDOR") return ["marketplace", "vendor"];
   if (role === "ADMIN")
-    return ["marketplace", "vendor", "affiliate", "analytics", "admin"];
+    return ["marketplace", "affiliate", "analytics", "admin"];
   return ["marketplace"];
 }
 

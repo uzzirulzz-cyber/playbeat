@@ -814,22 +814,6 @@ export function Marketplace() {
         overlay="heavy"
         align="center"
       />
-
-      {/* Brand strip 3 — seller / vendor CTA */}
-      <BrandStrip
-        image="/brand/brand-3.jpg"
-        eyebrow="For Creators & Vendors"
-        title={
-          <>
-            Sell your digital products to the{" "}
-            <span className="pb-text-gradient">entire world.</span>
-          </>
-        }
-        description="AI tools, software licenses, templates, courses, gift cards — list once, sell everywhere. Built-in payments via Lemon Squeezy, affiliate program, and vendor analytics. Keep 85% of every sale."
-        cta="Become A Vendor"
-        onCta={() => toast.message("Vendor sign-up — coming soon")}
-        overlay="heavy"
-      />
     </div>
   );
 }

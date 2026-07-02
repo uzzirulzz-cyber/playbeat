@@ -73,7 +73,6 @@ import { Logo as PlaybeatLogo, LogoMark } from "./logo";
 
 const TABS: Array<{ key: TabKey; label: string; icon: typeof Store }> = [
   { key: "marketplace", label: "Marketplace", icon: Store },
-  { key: "vendor", label: "Vendor Studio", icon: LayoutDashboard },
   { key: "affiliate", label: "Affiliate Hub", icon: Share2 },
   { key: "analytics", label: "Analytics", icon: BarChart3 },
   { key: "admin", label: "Admin", icon: Shield },

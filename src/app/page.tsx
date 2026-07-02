@@ -6,7 +6,6 @@ import { usePlaybeatStore, canAccessTab } from "@/lib/store";
 import { Header } from "@/components/playbeat/header";
 import { Footer } from "@/components/playbeat/footer";
 import { Marketplace } from "@/components/playbeat/marketplace";
-import { VendorStudio } from "@/components/playbeat/vendor-studio";
 import { AffiliateHub } from "@/components/playbeat/affiliate-hub";
 import { Analytics } from "@/components/playbeat/analytics";
 import { AdminConsole } from "@/components/playbeat/admin-console";
@@ -37,8 +36,6 @@ function TabContent() {
     switch (effectiveTab) {
       case "marketplace":
         return <Marketplace />;
-      case "vendor":
-        return <VendorStudio />;
       case "affiliate":
         return <AffiliateHub />;
       case "analytics":
