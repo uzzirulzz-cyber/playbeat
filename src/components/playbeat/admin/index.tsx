@@ -55,6 +55,7 @@ import { AdminPayments } from "./payments";
 import { AdminReports } from "./reports";
 import { AdminMarketing } from "./marketing";
 import { AdminMedia } from "./media";
+import { AdminSettings } from "./settings";
 import { SimpleModule } from "./simple-module";
 
 type ModuleKey =
@@ -343,22 +344,6 @@ const SIMPLE_MODULES: Record<
       "Backup & Restore",
     ],
   },
-  settings: {
-    title: "System Settings",
-    description: "General config, branding, SMTP, storage, and more",
-    icon: Settings,
-    features: [
-      "General Settings",
-      "Branding (Logo, Favicon)",
-      "SMTP Configuration",
-      "SMS API",
-      "Cloud Storage",
-      "CDN Settings",
-      "API Keys",
-      "Languages & Timezone",
-      "Currency & Taxes",
-    ],
-  },
   mobile: {
     title: "Mobile App Management",
     description: "Manage your Android and iOS applications",
@@ -490,6 +475,8 @@ export function AdminConsole() {
         return <AdminMarketing />;
       case "media":
         return <AdminMedia />;
+      case "settings":
+        return <AdminSettings />;
       default: {
         const mod = SIMPLE_MODULES[active];
         if (mod) {
