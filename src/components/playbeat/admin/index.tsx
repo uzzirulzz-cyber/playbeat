@@ -52,6 +52,7 @@ import { AdminWooCommerce } from "./woocommerce";
 import { AdminWordPress } from "./wordpress";
 import { AdminJazzCash } from "./jazzcash";
 import { AdminPayments } from "./payments";
+import { AdminReports } from "./reports";
 import { SimpleModule } from "./simple-module";
 
 type ModuleKey =
@@ -245,23 +246,6 @@ const SIMPLE_MODULES: Record<
       "Vendor Commission",
       "Monthly Reports",
       "Export PDF / Excel",
-    ],
-  },
-  reports: {
-    title: "Reports",
-    description: "Generate and export detailed business reports",
-    icon: FileText,
-    features: [
-      "Sales Report",
-      "Revenue Report",
-      "Customer Report",
-      "Product Report",
-      "IPTV Usage Report",
-      "Subscription Report",
-      "Affiliate Report",
-      "Tax Report",
-      "Refund Report",
-      "Export PDF / Excel / CSV",
     ],
   },
   marketing: {
@@ -527,6 +511,8 @@ export function AdminConsole() {
         return <AdminJazzCash />;
       case "payments":
         return <AdminPayments />;
+      case "reports":
+        return <AdminReports />;
       default: {
         const mod = SIMPLE_MODULES[active];
         if (mod) {
