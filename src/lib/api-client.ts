@@ -381,6 +381,57 @@ export const api = {
       `/auth/register`,
       { method: "POST", body: JSON.stringify({ name, email, password }) }
     ),
+  // ===== WooCommerce =====
+  woocommerceProducts: () =>
+    apiFetch<{
+      configured: boolean;
+      items: Array<{
+        id: number;
+        name: string;
+        price: string;
+        regular_price: string;
+        sale_price: string;
+        status: string;
+        type: string;
+        stock_status: string;
+        stock_quantity: number | null;
+        images: Array<{ src: string }>;
+        categories: Array<{ id: number; name: string }>;
+        permalink: string;
+        short_description: string;
+      }>;
+      error?: string;
+    }>(`/woocommerce/products`),
+  woocommerceOrders: () =>
+    apiFetch<{
+      configured: boolean;
+      items: Array<{
+        id: number;
+        number: string;
+        status: string;
+        total: string;
+        currency: string;
+        payment_method_title: string;
+        date_created: string;
+        billing: { first_name: string; last_name: string; email: string };
+        line_items: Array<{ name: string; quantity: number; total: string }>;
+      }>;
+      error?: string;
+    }>(`/woocommerce/orders`),
+  // ===== WordPress =====
+  wordpressPosts: () =>
+    apiFetch<{
+      configured: boolean;
+      items: Array<{
+        id: number;
+        date: string;
+        title: { rendered: string };
+        excerpt: { rendered: string };
+        link: string;
+        status: string;
+      }>;
+      error?: string;
+    }>(`/wordpress/posts`),
 };
 
 // ===== Utilities =====

@@ -15,6 +15,7 @@ import {
   DollarSign,
   CreditCard,
   FileText,
+  FileText as WordPressIcon,
   Megaphone,
   Image as ImageIcon,
   Layout,
@@ -47,6 +48,8 @@ import { AdminDashboard } from "./dashboard";
 import { AdminUsers } from "./users";
 import { AdminProducts } from "./products";
 import { AdminOrders } from "./orders";
+import { AdminWooCommerce } from "./woocommerce";
+import { AdminWordPress } from "./wordpress";
 import { SimpleModule } from "./simple-module";
 
 type ModuleKey =
@@ -54,6 +57,8 @@ type ModuleKey =
   | "analytics"
   | "products"
   | "orders"
+  | "woocommerce"
+  | "wordpress"
   | "subscriptions"
   | "coupons"
   | "users"
@@ -91,6 +96,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "products", label: "Products", icon: Package },
       { key: "orders", label: "Orders", icon: ShoppingCart },
+      { key: "woocommerce", label: "WooCommerce", icon: ShoppingCart },
       { key: "subscriptions", label: "Subscriptions", icon: RefreshCw },
       { key: "coupons", label: "Coupons", icon: Ticket },
     ],
@@ -120,6 +126,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Marketing & Content",
     items: [
       { key: "marketing", label: "Marketing", icon: Megaphone },
+      { key: "wordpress", label: "WordPress CMS", icon: FileText },
       { key: "media", label: "Media Library", icon: ImageIcon },
       { key: "website", label: "Website Builder", icon: Layout },
       { key: "seo", label: "SEO", icon: Search },
@@ -526,6 +533,10 @@ export function AdminConsole() {
         return <AdminProducts />;
       case "orders":
         return <AdminOrders />;
+      case "woocommerce":
+        return <AdminWooCommerce />;
+      case "wordpress":
+        return <AdminWordPress />;
       default: {
         const mod = SIMPLE_MODULES[active];
         if (mod) {
