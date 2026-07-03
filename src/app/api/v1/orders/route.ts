@@ -14,39 +14,44 @@ export async function GET(request: NextRequest) {
   if (limited) return limited;
   await ensureSeeded();
 
-  const user = await getCurrentUser(request);
-  if (!user) return error("Not authenticated", 401);
+  try {
+    const user = await getCurrentUser(request);
+    if (!user) return ok({ items: [] });
 
-  const orders = await db.order.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-    include: {
-      items: { include: { product: true } },
-      payment: true,
-    },
-  });
+    const orders = await db.order.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+      include: {
+        items: { include: { product: true } },
+        payment: true,
+      },
+    });
 
-  return ok({
-    items: orders.map((o) => ({
-      id: o.id,
-      orderNumber: o.orderNumber,
-      status: o.status,
-      subtotal: o.subtotal,
-      discount: o.discount,
-      total: o.total,
-      couponCode: o.couponCode,
-      createdAt: o.createdAt,
-      provider: o.payment?.provider,
-      paymentStatus: o.payment?.status,
-      items: o.items.map((it) => ({
-        id: it.id,
-        productId: it.productId,
-        title: it.product.title,
-        price: it.price,
-        licenseKey: it.licenseKey,
+    return ok({
+      items: orders.map((o) => ({
+        id: o.id,
+        orderNumber: o.orderNumber,
+        status: o.status,
+        subtotal: o.subtotal,
+        discount: o.discount,
+        total: o.total,
+        couponCode: o.couponCode,
+        createdAt: o.createdAt,
+        provider: o.payment?.provider,
+        paymentStatus: o.payment?.status,
+        items: o.items.map((it) => ({
+          id: it.id,
+          productId: it.productId,
+          title: it.product.title,
+          price: it.price,
+          licenseKey: it.licenseKey,
+        })),
       })),
-    })),
-  });
+    });
+  } catch (e) {
+    // DB connection issues (Neon cold starts) — return empty instead of 500
+    return ok({ items: [] });
+  }
 }
 
 // POST /api/v1/orders  — instant checkout (mock payment)
