@@ -56,6 +56,7 @@ import { AdminReports } from "./reports";
 import { AdminMarketing } from "./marketing";
 import { AdminMedia } from "./media";
 import { AdminSettings } from "./settings";
+import { AdminMobileApp } from "./mobile-app";
 import { SimpleModule } from "./simple-module";
 
 type ModuleKey =
@@ -344,19 +345,6 @@ const SIMPLE_MODULES: Record<
       "Backup & Restore",
     ],
   },
-  mobile: {
-    title: "Mobile App Management",
-    description: "Manage your Android and iOS applications",
-    icon: Smartphone,
-    features: [
-      "Android & iOS Versions",
-      "Push Notifications",
-      "Splash Screen",
-      "App Themes",
-      "Deep Linking",
-      "OTA Configuration",
-    ],
-  },
 };
 
 function SidebarContent({
@@ -477,6 +465,8 @@ export function AdminConsole() {
         return <AdminMedia />;
       case "settings":
         return <AdminSettings />;
+      case "mobile":
+        return <AdminMobileApp />;
       default: {
         const mod = SIMPLE_MODULES[active];
         if (mod) {
