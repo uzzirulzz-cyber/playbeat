@@ -51,6 +51,7 @@ import { AdminOrders } from "./orders";
 import { AdminWooCommerce } from "./woocommerce";
 import { AdminWordPress } from "./wordpress";
 import { AdminJazzCash } from "./jazzcash";
+import { AdminPayments } from "./payments";
 import { SimpleModule } from "./simple-module";
 
 type ModuleKey =
@@ -244,24 +245,6 @@ const SIMPLE_MODULES: Record<
       "Vendor Commission",
       "Monthly Reports",
       "Export PDF / Excel",
-    ],
-  },
-  payments: {
-    title: "Payment Gateway Management",
-    description: "Configure and monitor all payment gateways",
-    icon: CreditCard,
-    features: [
-      "Lemon Squeezy",
-      "Stripe",
-      "PayPal",
-      "Paddle",
-      "JazzCash",
-      "EasyPaisa",
-      "Crypto",
-      "Bank Transfer",
-      "Webhooks",
-      "Settlement Reports",
-      "Multi-Currency",
     ],
   },
   reports: {
@@ -542,6 +525,8 @@ export function AdminConsole() {
         return <AdminWordPress />;
       case "jazzcash":
         return <AdminJazzCash />;
+      case "payments":
+        return <AdminPayments />;
       default: {
         const mod = SIMPLE_MODULES[active];
         if (mod) {

@@ -450,6 +450,29 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  // ===== Payment Gateways =====
+  paymentGateways: () =>
+    apiFetch<{
+      gateways: Array<{
+        id: string;
+        name: string;
+        description: string;
+        fees: string;
+        settlement: string;
+        active: boolean;
+        mode: string;
+        configKeys: string[];
+        color: string;
+        icon: string;
+      }>;
+      summary: {
+        total: number;
+        active: number;
+        inactive: number;
+        live: number;
+        sandbox: number;
+      };
+    }>(`/payments/gateways`),
 };
 
 // ===== Utilities =====
