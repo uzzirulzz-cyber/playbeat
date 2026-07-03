@@ -3,26 +3,22 @@ import crypto from "crypto";
 /**
  * JazzCash Payment Gateway Integration.
  *
- * Supports JazzCash's Hosted Checkout (Web Payment) flow:
- *  1. Merchant creates a transaction with an HMAC-SHA256 signature
- *  2. Customer is redirected to the JazzCash payment page (POST form)
- *  3. After payment, JazzCash redirects back to the Return URL
- *  4. JazzCash sends an IPN (Instant Payment Notification) to the webhook
+ * Uses JazzCash's HTTP POST (Page Redirection) flow — the customer is
+ * redirected to the JazzCash payment page via a POST form submission.
  *
  * Required env vars:
  *   JAZZCASH_MERCHANT_ID
  *   JAZZCASH_PASSWORD
  *   JAZZCASH_INTEGRITY_SALT   (hash key)
- *   JAZZCASH_RETURN_URL       (e.g. https://playbeat.live/api/v1/payments/jazzcash/return)
- *   JAZZCASH_POSTBACK_URL     (e.g. https://playbeat.live/api/v1/payments/jazzcash/webhook)
- *
- * Set JAZZCASH_SANDBOX=true for sandbox, false for live.
+ *   JAZZCASH_RETURN_URL
+ *   JAZZCASH_SANDBOX          (true for sandbox, false for live)
  */
 
+// JazzCash sandbox + live gateway URLs (Page Redirection / merchantform)
 const SANDBOX_URL =
-  "https://sandbox.jazzcash.com.pk/CustomerServices/onlinepayment/transaction/Request";
+  "https://sandbox.jazzcash.com.pk/CustomerPortal/transactionmanagement/merchantform/";
 const LIVE_URL =
-  "https://seeds.jazzcash.com.pk/CustomerServices/onlinepayment/transaction/Request";
+  "https://seeds.jazzcash.com.pk/CustomerPortal/transactionmanagement/merchantform/";
 
 export function isJazzCashConfigured(): boolean {
   return Boolean(
@@ -47,21 +43,28 @@ export function generateTxnRefNo(): string {
 /**
  * Compute the HMAC-SHA256 secure hash for JazzCash.
  *
- * JazzCash expects: sort all pp_ parameters alphabetically, join values with
- * `&`, prepend the integrity salt, then HMAC-SHA256 → uppercase hex.
+ * JazzCash expects: collect all pp_ and ppmpf_ parameters (excluding
+ * pp_SecureHash), sort alphabetically by name, skip empty values, join
+ * values with '&', prepend the integrity salt + '&', then HMAC-SHA256.
  */
 export function computeSecureHash(
   params: Record<string, string>,
   salt: string,
 ): string {
-  // Sort keys alphabetically, exclude pp_SecureHash itself
+  // Sort keys alphabetically, exclude pp_SecureHash, skip empty values
   const sortedKeys = Object.keys(params)
     .filter((k) => k !== "pp_SecureHash")
     .sort();
 
-  // Build the string: salt&val1&val2&val3...
-  const parts = [salt, ...sortedKeys.map((k) => params[k] || "")];
-  const data = parts.join("&");
+  // Build the string: salt&val1&val2&val3... (only non-empty values)
+  const nonEmptyValues: string[] = [salt];
+  for (const key of sortedKeys) {
+    const val = params[key];
+    if (val !== undefined && val !== null && val !== "") {
+      nonEmptyValues.push(val);
+    }
+  }
+  const data = nonEmptyValues.join("&");
 
   return crypto
     .createHmac("sha256", salt)
@@ -70,7 +73,7 @@ export function computeSecureHash(
     .toUpperCase();
 }
 
-/** Verify the secure hash returned by JazzCash in the IPN/return callback. */
+/** Verify the secure hash returned by JazzCash in the callback. */
 export function verifySecureHash(
   params: Record<string, string>,
   salt: string,
@@ -98,27 +101,28 @@ export function buildTransactionParams(
   const salt = process.env.JAZZCASH_INTEGRITY_SALT!;
   const returnUrl =
     process.env.JAZZCASH_RETURN_URL ||
-    `${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/v1/payments/jazzcash/return`;
+    "https://playbeat.digital/api/v1/payments/jazzcash/return";
 
   const now = new Date();
-  const txnDateTime = now
-    .toISOString()
-    .replace(/[-:T]/g, "")
-    .slice(0, 14); // YYYYMMDDHHmmss
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const txnDateTime =
+    `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
+    `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
 
   const expiry = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-  const txnExpiryDateTime = expiry
-    .toISOString()
-    .replace(/[-:T]/g, "")
-    .slice(0, 14);
+  const txnExpiryDateTime =
+    `${expiry.getFullYear()}${pad(expiry.getMonth() + 1)}${pad(expiry.getDate())}` +
+    `${pad(expiry.getHours())}${pad(expiry.getMinutes())}${pad(expiry.getSeconds())}`;
 
+  // Build params matching the JazzCash form exactly
   const params: Record<string, string> = {
     pp_Version: "1.1",
-    pp_TxnType: "MWALLET",
     pp_Language: "EN",
     pp_MerchantID: merchantId,
     pp_SubMerchantID: "",
     pp_Password: password,
+    pp_BankID: "TBANK",
+    pp_ProductID: "RETL",
     pp_TxnRefNo: payment.txnRefNo,
     pp_Amount: String(Math.round(payment.amount * 100)), // paisa
     pp_TxnCurrency: "PKR",
@@ -130,11 +134,11 @@ export function buildTransactionParams(
     pp_CNIC: "",
     pp_Email: payment.customerEmail || "",
     pp_ReturnURL: returnUrl,
-    ppmpf_1: "",
-    ppmpf_2: "",
-    ppmpf_3: "",
-    ppmpf_4: "",
-    ppmpf_5: "",
+    ppmpf_1: "1",
+    ppmpf_2: "2",
+    ppmpf_3: "3",
+    ppmpf_4: "4",
+    ppmpf_5: "5",
   };
 
   // Compute and append the secure hash
@@ -143,7 +147,7 @@ export function buildTransactionParams(
   return { params, gatewayUrl: getGatewayUrl() };
 }
 
-/** Parse the JazzCash callback (return URL or IPN) and verify the signature. */
+/** Parse the JazzCash callback and verify the signature. */
 export function parseCallback(
   query: Record<string, string>,
 ): {
@@ -156,7 +160,6 @@ export function parseCallback(
   const salt = process.env.JAZZCASH_INTEGRITY_SALT || "";
   const receivedHash = query.pp_SecureHash || "";
 
-  // Verify the signature
   const verified = verifySecureHash(query, salt, receivedHash);
 
   const amountStr = query.pp_Amount;
