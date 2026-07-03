@@ -53,6 +53,7 @@ import { AdminWordPress } from "./wordpress";
 import { AdminJazzCash } from "./jazzcash";
 import { AdminPayments } from "./payments";
 import { AdminReports } from "./reports";
+import { AdminMarketing } from "./marketing";
 import { SimpleModule } from "./simple-module";
 
 type ModuleKey =
@@ -246,22 +247,6 @@ const SIMPLE_MODULES: Record<
       "Vendor Commission",
       "Monthly Reports",
       "Export PDF / Excel",
-    ],
-  },
-  marketing: {
-    title: "Marketing",
-    description: "Campaigns, newsletters, affiliate and referral programs",
-    icon: Megaphone,
-    features: [
-      "Email Campaigns",
-      "Push Notifications",
-      "SMS Marketing",
-      "WhatsApp Marketing",
-      "Popups & Exit Intent",
-      "Newsletter",
-      "Affiliate Program",
-      "Referral Program",
-      "Loyalty Program",
     ],
   },
   media: {
@@ -513,6 +498,8 @@ export function AdminConsole() {
         return <AdminPayments />;
       case "reports":
         return <AdminReports />;
+      case "marketing":
+        return <AdminMarketing />;
       default: {
         const mod = SIMPLE_MODULES[active];
         if (mod) {
