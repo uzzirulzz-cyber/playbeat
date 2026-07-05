@@ -114,15 +114,17 @@ export function buildTransactionParams(
     `${expiry.getFullYear()}${pad(expiry.getMonth() + 1)}${pad(expiry.getDate())}` +
     `${pad(expiry.getHours())}${pad(expiry.getMinutes())}${pad(expiry.getSeconds())}`;
 
-  // Build params matching the JazzCash form exactly
+  // Build params matching the JazzCash Page Redirection form exactly.
+  // IMPORTANT: Do NOT include pp_BankID, pp_ProductID, pp_CNIC, pp_Email,
+  // or pp_MobileNumber — they cause hash mismatch with JazzCash sandbox.
+  // Empty-string fields are sent in the form but excluded from the hash
+  // (computeSecureHash skips empty values).
   const params: Record<string, string> = {
     pp_Version: "1.1",
     pp_Language: "EN",
     pp_MerchantID: merchantId,
     pp_SubMerchantID: "",
     pp_Password: password,
-    pp_BankID: "TBANK",
-    pp_ProductID: "RETL",
     pp_TxnRefNo: payment.txnRefNo,
     pp_Amount: String(Math.round(payment.amount * 100)), // paisa
     pp_TxnCurrency: "PKR",
@@ -130,9 +132,6 @@ export function buildTransactionParams(
     pp_TxnExpiryDateTime: txnExpiryDateTime,
     pp_BillReference: payment.billReference,
     pp_Description: payment.description,
-    pp_MobileNumber: payment.customerMobile || "",
-    pp_CNIC: "",
-    pp_Email: payment.customerEmail || "",
     pp_ReturnURL: returnUrl,
     ppmpf_1: "1",
     ppmpf_2: "2",
