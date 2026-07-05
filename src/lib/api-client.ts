@@ -402,6 +402,35 @@ export const api = {
       }>;
       error?: string;
     }>(`/woocommerce/products`),
+  woocommerceTest: (payload: {
+    storeUrl: string;
+    consumerKey: string;
+    consumerSecret: string;
+  }) =>
+    apiFetch<{
+      success: boolean;
+      storeUrl: string;
+      productCount: number;
+      sampleProducts: Array<{
+        id: number;
+        name: string;
+        price: string;
+        status: string;
+        stock_status: string;
+        permalink: string;
+      }>;
+      storeInfo: {
+        version: string;
+        wordpressVersion: string;
+        theme: string;
+        currency: string;
+        country: string;
+      } | null;
+      message: string;
+    }>(`/woocommerce/test`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
   woocommerceOrders: () =>
     apiFetch<{
       configured: boolean;
