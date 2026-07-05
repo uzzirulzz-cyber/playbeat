@@ -264,6 +264,121 @@ JAZZCASH_POSTBACK_URL=https://playbeat.live/api/v1/payments/jazzcash/webhook`}
           </Card>
         ))}
       </div>
+
+      {/* Response Codes from PDF v3.9 Appendix I */}
+      <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
+        <CardHeader>
+          <CardTitle className="text-base">Gateway Response Codes (Official PDF v3.9)</CardTitle>
+          <p className="text-xs text-slate-300">
+            Complete list from JazzCash Integration Guide Appendix I — 50+ codes
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="max-h-96 overflow-y-auto rounded border border-white/10 pb-scrollbar">
+            <table className="w-full text-[10px]">
+              <thead className="sticky top-0 bg-black/60 text-left text-slate-300">
+                <tr>
+                  <th className="p-1.5 font-semibold">Code</th>
+                  <th className="p-1.5 font-semibold">Description</th>
+                </tr>
+              </thead>
+              <tbody className="text-slate-300">
+                {[
+                  { code: "000", desc: "Transaction successful", color: "text-green-400" },
+                  { code: "001", desc: "Limit exceeded", color: "text-amber-400" },
+                  { code: "002", desc: "Account not found", color: "text-red-400" },
+                  { code: "003", desc: "Account inactive", color: "text-red-400" },
+                  { code: "004", desc: "Low balance", color: "text-amber-400" },
+                  { code: "014", desc: "Warm card", color: "text-red-400" },
+                  { code: "015", desc: "Hot card", color: "text-red-400" },
+                  { code: "016", desc: "Invalid card status", color: "text-red-400" },
+                  { code: "024", desc: "Bad PIN", color: "text-red-400" },
+                  { code: "055", desc: "Host link down", color: "text-red-400" },
+                  { code: "058", desc: "Transaction timed out", color: "text-amber-400" },
+                  { code: "059", desc: "Transaction rejected by host", color: "text-red-400" },
+                  { code: "060", desc: "PIN retries exhausted", color: "text-red-400" },
+                  { code: "062", desc: "Host offline", color: "text-red-400" },
+                  { code: "063", desc: "Destination not found", color: "text-red-400" },
+                  { code: "066", desc: "No transactions allowed", color: "text-red-400" },
+                  { code: "067", desc: "Invalid account status", color: "text-red-400" },
+                  { code: "095", desc: "Transaction rejected", color: "text-red-400" },
+                  { code: "101", desc: "Invalid merchant credentials", color: "text-red-400" },
+                  { code: "102", desc: "Card blocked", color: "text-red-400" },
+                  { code: "103", desc: "Customer blocked", color: "text-red-400" },
+                  { code: "104", desc: "BIN not allowed for use on merchant", color: "text-red-400" },
+                  { code: "105", desc: "Transaction exceeds merchant per transaction limit", color: "text-amber-400" },
+                  { code: "106", desc: "Transaction exceeds per transaction limit for card", color: "text-amber-400" },
+                  { code: "107", desc: "Transaction exceeds cycle limit for card", color: "text-amber-400" },
+                  { code: "108", desc: "Authorization of customer registration required", color: "text-amber-400" },
+                  { code: "109", desc: "Transaction does not exist", color: "text-amber-400" },
+                  { code: "110", desc: "Invalid value for field", color: "text-red-400" },
+                  { code: "111", desc: "Transaction not allowed on Merchant/Bank", color: "text-red-400" },
+                  { code: "112", desc: "Transaction Cancelled by User", color: "text-amber-400" },
+                  { code: "113", desc: "Transaction settlement period lapsed", color: "text-amber-400" },
+                  { code: "115", desc: "Invalid hash received", color: "text-red-400" },
+                  { code: "116", desc: "Transaction Expired", color: "text-amber-400" },
+                  { code: "117", desc: "Transaction not allowed on Sub Merchant", color: "text-red-400" },
+                  { code: "118", desc: "Transaction not allowed due to maintenance", color: "text-amber-400" },
+                  { code: "119", desc: "Transaction is awaiting Reversal", color: "text-amber-400" },
+                  { code: "120", desc: "Delivery status cannot be updated", color: "text-amber-400" },
+                  { code: "121", desc: "Transaction confirmed by Merchant", color: "text-green-400" },
+                  { code: "122", desc: "Reversed", color: "text-amber-400" },
+                  { code: "124", desc: "Order placed, waiting for financials (OTC)", color: "text-green-400" },
+                  { code: "125", desc: "Order delivered", color: "text-green-400" },
+                  { code: "126", desc: "Transaction is disputed", color: "text-amber-400" },
+                  { code: "127", desc: "Transaction not allowed due to maintenance", color: "text-amber-400" },
+                  { code: "128", desc: "Awaiting action by scheme on Dispute", color: "text-amber-400" },
+                  { code: "129", desc: "Transaction is dropped", color: "text-amber-400" },
+                  { code: "131", desc: "Transaction is Refunded", color: "text-green-400" },
+                  { code: "132", desc: "Cannot be refunded", color: "text-red-400" },
+                  { code: "134", desc: "Transaction has been timed out", color: "text-amber-400" },
+                  { code: "135", desc: "Invalid BIN was entered for discount", color: "text-red-400" },
+                  { code: "157", desc: "Transaction is pending (MWALLET and MIGS)", color: "text-amber-400" },
+                  { code: "199", desc: "System error", color: "text-red-400" },
+                  { code: "200", desc: "Transaction approved – Post authorization", color: "text-green-400" },
+                  { code: "210", desc: "Authorization pending", color: "text-amber-400" },
+                  { code: "401", desc: "Transaction could not be processed, try again", color: "text-amber-400" },
+                  { code: "402", desc: "Transaction declined by bank", color: "text-red-400" },
+                  { code: "403", desc: "Transaction timed out", color: "text-amber-400" },
+                  { code: "404", desc: "Card is expired", color: "text-red-400" },
+                  { code: "405", desc: "Insufficient balance in card", color: "text-amber-400" },
+                  { code: "406", desc: "System error, try again", color: "text-red-400" },
+                  { code: "407", desc: "Internal system error", color: "text-red-400" },
+                  { code: "408", desc: "Bank does not support internet transactions", color: "text-red-400" },
+                  { code: "409", desc: "Transaction declined - do not contact issuer", color: "text-red-400" },
+                  { code: "410", desc: "Transaction aborted", color: "text-amber-400" },
+                  { code: "411", desc: "Transaction blocked due to risk", color: "text-red-400" },
+                  { code: "414", desc: "Transaction declined, contact bank", color: "text-red-400" },
+                  { code: "415", desc: "3D Secure ID verification failed", color: "text-red-400" },
+                  { code: "416", desc: "CVV verification failed", color: "text-red-400" },
+                  { code: "417", desc: "Order locked - another transaction in progress", color: "text-amber-400" },
+                  { code: "419", desc: "Card not enrolled in 3D secure", color: "text-amber-400" },
+                  { code: "421", desc: "Retry limit exhausted", color: "text-red-400" },
+                  { code: "422", desc: "Transaction declined due to duplication", color: "text-red-400" },
+                  { code: "423", desc: "Address verification failed", color: "text-red-400" },
+                  { code: "424", desc: "Wrong CVV", color: "text-red-400" },
+                  { code: "425", desc: "Address verification and card security code failed", color: "text-red-400" },
+                  { code: "426", desc: "Transaction declined due to payment plan", color: "text-red-400" },
+                  { code: "429", desc: "Transaction not processed, try again", color: "text-amber-400" },
+                  { code: "430", desc: "Request rejected", color: "text-red-400" },
+                  { code: "431", desc: "Server failed", color: "text-red-400" },
+                  { code: "432", desc: "Server busy", color: "text-amber-400" },
+                  { code: "435", desc: "Card enrolled", color: "text-green-400" },
+                  { code: "444", desc: "ACS session timeout", color: "text-amber-400" },
+                  { code: "446", desc: "Authentication failed", color: "text-red-400" },
+                  { code: "448", desc: "Card does not support 3DS", color: "text-amber-400" },
+                  { code: "999", desc: "Transaction failed (technical issue at PG or Bank)", color: "text-red-400" },
+                ].map((r) => (
+                  <tr key={r.code} className="border-t border-white/5 hover:bg-white/5">
+                    <td className={`p-1.5 font-mono font-bold ${r.color}`}>{r.code}</td>
+                    <td className="p-1.5">{r.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </motion.div>
   );
 }
