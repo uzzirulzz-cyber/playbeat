@@ -802,3 +802,46 @@ Stage Summary:
 - The wizard shows real store info (version, currency, country) and sample products on successful connection.
 - Direct link to https://woocommerce.com/woocommerce/ for users who don't have a store yet.
 - The 3-step flow (Get Keys → Test → Save) guides users from zero to connected in ~5 minutes.
+
+---
+Task ID: 37
+Agent: Main (Z.ai Code)
+Task: Add WordPress.org Plugin Directory browser to admin panel (user shared wordpress.org/plugins URL)
+
+Work Log:
+- User shared https://wordpress.org/plugins/ — the official WordPress.org Plugin Directory.
+- Previously the WordPress admin module only showed blog posts (from a connected WP site). No way to browse/search the 60,000+ plugins on wordpress.org from within the admin panel.
+- Created new endpoint: GET /api/v1/wordpress/plugins
+  - Queries the official WordPress.org Plugin Information API at api.wordpress.org/plugins/info/1.2/
+  - Two modes:
+    1. Browse mode (no search query): supports popular | new | updated | top-rated
+    2. Search mode (with ?search=...): full-text search across all plugins
+  - Returns normalized plugin data: name, slug, version, author, rating (0-100), num_ratings, downloads, active_installs, short_description, homepage, download_link, icons (svg/1x/2x), banner, requires (min WP), tested (max WP tested), requires_php
+  - 5-minute server-side cache via `next: { revalidate: 300 }` to avoid hammering the WP.org API
+  - 15-second timeout with AbortSignal.timeout(15000)
+  - Clear error messages for 404, timeout, network errors
+- Added api.wordpressPlugins(search?, browse?) to api-client.ts
+- Rewrote the WordPress admin module (wordpress.tsx) with a two-tab layout:
+  - **Plugin Directory tab** (default view):
+    - Search bar: "Search 60,000+ WordPress plugins (e.g. woocommerce, elementor, yoast)"
+    - Browse tabs: 🔥 Popular · ✨ New · 🔄 Recently Updated · ⭐ Top Rated
+    - Plugin cards grid (responsive 1/2/3 columns)
+    - Each card shows: plugin icon (svg/2x/1x), name, version badge, author, short description, 3-stat grid (rating %, downloads, active installs), "View Details" button (opens wordpress.org plugin page), "Get" button (downloads .zip), last updated date, "Tested up to WP X.X" badge
+    - Empty state with link to wordpress.org/plugins/
+    - Loading skeleton (9 cards)
+    - Error state with clear message
+    - "Browse all on wordpress.org" link in the results count bar
+  - **Blog Posts tab**: existing functionality (shows posts from a connected WP site, unchanged)
+- Added "Open Plugin Directory" button in the header → https://wordpress.org/plugins/
+- Verified end-to-end via curl:
+  - Browse popular: returns Elementor (10M installs, 90% rating), Yoast SEO (10M installs, 96% rating), Contact Form 7 (10M installs, 80% rating)
+  - Search "woocommerce": returns WooCommerce (7M active), WooCommerce PayPal Payments (800K), WooCommerce Stripe (700K), Google for WooCommerce (800K), WooPayments (900K)
+- `bun run lint` passes cleanly.
+- Committed (f51ecc7) + pushed to GitHub.
+
+Stage Summary:
+- WordPress admin module now has a full Plugin Directory browser integrated with the official WordPress.org API.
+- Users can search 60,000+ plugins and browse by Popular/New/Updated/Top Rated without leaving the admin panel.
+- Each plugin card shows real stats (rating, downloads, active installs) and has direct download links.
+- Direct link to https://wordpress.org/plugins/ in the header for users who want to browse on the official site.
+- Plugin Directory is the DEFAULT tab when opening the WordPress admin module (since it works without any configuration — no WP site connection needed).
