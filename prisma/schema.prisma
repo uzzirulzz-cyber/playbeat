@@ -92,6 +92,7 @@ model Product {
   version      String?
   changelog    String? // JSON array of {version, date, notes}
   cover        String? // JSON { type, colors, icon, seed } or image URL
+  variants     String? // JSON array of variant options for dropdown
 
   seoTitle       String?
   seoDescription String?

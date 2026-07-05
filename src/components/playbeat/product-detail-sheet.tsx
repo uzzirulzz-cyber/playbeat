@@ -28,6 +28,13 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -510,7 +517,39 @@ export function ProductDetailSheet() {
 
         {/* Footer actions */}
         {product && !isLoading && (
-          <div className="border-t border-border/60 bg-card/40 p-3">
+          <div className="border-t border-border/60 bg-card/40 p-3 space-y-3">
+            {/* Variants dropdown */}
+            {(() => {
+              const variants: string[] = (product as any).variants
+                ? (typeof (product as any).variants === "string"
+                  ? JSON.parse((product as any).variants)
+                  : (product as any).variants)
+                : [];
+              if (variants.length === 0) return null;
+              return (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Select Variant</Label>
+                  <Select
+                    value={(product as any).selectedVariant || variants[0]}
+                    onValueChange={(v) => {
+                      // Store selected variant on the product object
+                      (product as any).selectedVariant = v;
+                    }}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {variants.map((v) => (
+                        <SelectItem key={v} value={v}>
+                          {v}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })()}
             <div className="flex gap-2">
               <Button
                 variant="outline"
