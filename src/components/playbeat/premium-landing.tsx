@@ -51,6 +51,10 @@ function Nav() {
   }, []);
 
   const links = ["Home", "IPTV", "Streaming", "AI", "Development", "Marketplace", "Pricing", "Blog", "Contact"];
+  // Routes that should navigate to a separate page instead of scrolling
+  const routeLinks: Record<string, string> = {
+    Marketplace: "/marketplace",
+  };
 
   return (
     <nav
@@ -65,22 +69,33 @@ function Nav() {
           <span className="text-lg font-bold tracking-tight">PLAYBEAT</span>
         </div>
         <div className="hidden items-center gap-1 lg:flex">
-          {links.map((l) => (
-            <a
-              key={l}
-              href={`#${l.toLowerCase()}`}
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {l}
-            </a>
-          ))}
+          {links.map((l) => {
+            const route = routeLinks[l];
+            return route ? (
+              <a
+                key={l}
+                href={route}
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {l}
+              </a>
+            ) : (
+              <a
+                key={l}
+                href={`#${l.toLowerCase()}`}
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {l}
+              </a>
+            );
+          })}
         </div>
         <div className="hidden items-center gap-2 lg:flex">
           <Button variant="ghost" size="sm" asChild>
             <a href="/admin">Login</a>
           </Button>
-          <Button size="sm" className="gap-1.5 bg-primary pb-neon">
-            Get Started <ArrowRight className="size-3.5" />
+          <Button size="sm" className="gap-1.5 bg-primary pb-neon" asChild>
+            <a href="/marketplace">Get Started <ArrowRight className="size-3.5" /></a>
           </Button>
         </div>
         <button className="lg:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
@@ -89,17 +104,31 @@ function Nav() {
       </div>
       {mobileOpen && (
         <div className="pb-glass mt-3 px-6 py-4 lg:hidden">
-          {links.map((l) => (
-            <a
-              key={l}
-              href={`#${l.toLowerCase()}`}
-              onClick={() => setMobileOpen(false)}
-              className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              {l}
-            </a>
-          ))}
-          <Button size="sm" className="mt-3 w-full">Get Started</Button>
+          {links.map((l) => {
+            const route = routeLinks[l];
+            return route ? (
+              <a
+                key={l}
+                href={route}
+                onClick={() => setMobileOpen(false)}
+                className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                {l}
+              </a>
+            ) : (
+              <a
+                key={l}
+                href={`#${l.toLowerCase()}`}
+                onClick={() => setMobileOpen(false)}
+                className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                {l}
+              </a>
+            );
+          })}
+          <Button size="sm" className="mt-3 w-full" asChild>
+            <a href="/marketplace">Get Started</a>
+          </Button>
         </div>
       )}
     </nav>
@@ -688,9 +717,12 @@ function Footer() {
           <div>
             <h4 className="text-sm font-bold">Products</h4>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-              {["IPTV", "Streaming", "AI Solutions", "Marketplace", "Development"].map((l) => (
-                <li key={l}><a href="#" className="hover:text-primary">{l}</a></li>
-              ))}
+              <li><a href="/marketplace" className="hover:text-primary">Marketplace</a></li>
+              <li><a href="/games" className="hover:text-primary">Games</a></li>
+              <li><a href="/ai-tools" className="hover:text-primary">AI Tools</a></li>
+              <li><a href="/marketplace?category=gift-cards" className="hover:text-primary">Gift Cards</a></li>
+              <li><a href="/marketplace?category=software-licenses" className="hover:text-primary">Software</a></li>
+              <li><a href="/marketplace?category=saas-subscriptions" className="hover:text-primary">Subscriptions</a></li>
             </ul>
           </div>
           <div>

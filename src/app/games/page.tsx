@@ -1,5 +1,10 @@
-import { CategoryPage } from "@/components/playbeat/category-page";
+import { redirect } from "next/navigation";
 
+/**
+ * /games → /marketplace?category=games
+ *
+ * Redirects to the marketplace filtered to the Games category.
+ */
 export default function GamesPage() {
-  return <CategoryPage category="games" />;
+  redirect("/marketplace?category=games");
 }
