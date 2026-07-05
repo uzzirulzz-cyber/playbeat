@@ -767,3 +767,38 @@ Self-check:
 
 Stage Summary:
 - Premium PlayBeat Digital landing page is live on the home route. All 13 sections built (Navbar, Hero, Statistics, Featured Services, Live TV Showcase, Why Choose, Timeline, Pricing, Testimonials, Partners Marquee, FAQ, Contact, Footer) with midnight black + electric blue + cyan glassmorphism design language, Framer Motion scroll reveals, animated counters, infinite partner marquee, responsive mobile-first layout, sticky footer, and working sonner toasts. Existing ProductDetailSheet + CartSheet overlays preserved. Lint clean. Single new file (~900 lines) + 1-line page.tsx rewrite.
+
+---
+Task ID: 36
+Agent: Main (Z.ai Code)
+Task: Add WooCommerce setup wizard with live connection tester (user shared woocommerce.com URL)
+
+Work Log:
+- User shared https://woocommerce.com/woocommerce/ — the official WooCommerce homepage. This signals they want to connect a WooCommerce store (or get one).
+- Previously the WooCommerce admin module just showed a static "not configured" card with raw .env vars to paste. No guidance, no way to verify credentials before saving.
+- Created new endpoint: POST /api/v1/woocommerce/test
+  - Accepts { storeUrl, consumerKey, consumerSecret } — does NOT save anything
+  - Tests the connection by fetching /wp-json/wc/v3/products with the provided creds
+  - Returns store info (version, currency, country) + sample products on success
+  - Handles 401/403 (auth failed), 404 (WC not installed at URL), timeout (10s), network errors
+  - All errors return clear, actionable messages
+- Added api.woocommerceTest() to api-client.ts
+- Rewrote the WooCommerce admin module's "not configured" state as a 3-step Setup Wizard:
+  - **Step 1 — Get API Keys**: Step-by-step guide showing exactly how to generate WC REST API keys in WordPress admin (WooCommerce → Settings → Advanced → REST API → Add key → Read/Write permissions → Generate). Includes warning that the secret is only shown once.
+  - **Step 2 — Test Connection**: Three input fields (Store URL, Consumer Key, Consumer Secret with password masking). "Test Connection" button calls the new endpoint. On success: shows green success card with store info (WC version, WP version, currency, country) + sample products from the user's store. On failure: red error card with the specific error message.
+  - **Step 3 — Save to .env**: Generates a ready-to-copy .env snippet with the user's ACTUAL storeUrl and consumerKey pre-filled. "Copy .env Snippet" button copies to clipboard. Instructions: restart dev server, come back, click Sync.
+- Added visual step indicator (1 → 2 → 3 with ✓ checkmark on completed steps)
+- Added "Get WooCommerce" button in the hero card linking to https://woocommerce.com/woocommerce/
+- Added woocommerce.com link in the connected state footer (always visible when WC is configured)
+- Verified endpoint via curl:
+  - Invalid URL → "WooCommerce REST API not found at this URL. Verify the store URL is correct and WooCommerce is installed."
+  - Missing fields → "Consumer Key is required"
+- `bun run lint` passes cleanly.
+- Committed (27c5f7c) + force-pushed to GitHub.
+
+Stage Summary:
+- WooCommerce admin module now has a complete setup wizard instead of a static "not configured" message.
+- Users can test their WC credentials LIVE before saving them to .env — no more guessing if the keys work.
+- The wizard shows real store info (version, currency, country) and sample products on successful connection.
+- Direct link to https://woocommerce.com/woocommerce/ for users who don't have a store yet.
+- The 3-step flow (Get Keys → Test → Save) guides users from zero to connected in ~5 minutes.
