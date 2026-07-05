@@ -1,34 +1,24 @@
-"use client";
-
-import { Header } from "@/components/playbeat/header";
-import { Footer } from "@/components/playbeat/footer";
-import { Marketplace } from "@/components/playbeat/marketplace";
-import { ProductDetailSheet } from "@/components/playbeat/product-detail-sheet";
-import { CartSheet } from "@/components/playbeat/cart-sheet";
+import { redirect } from "next/navigation";
 
 /**
- * /marketplace
+ * /marketplace → /
  *
- * The product marketplace — browse, search, filter, and buy digital
- * products. This is SEPARATE from the marketing landing page at `/`.
+ * The marketplace IS the storefront now — both the marketing hero and
+ * the product grid live on the home page (/). This route redirects
+ * any old links to the home page.
  *
- * Supports query params for category filtering:
- *   /marketplace                — all products
- *   /marketplace?category=games — games only
- *   /marketplace?category=ai-tools — AI tools only
- *   /marketplace?sort=price_asc — sorted by price
+ * Category filtering still works via query params:
+ *   /marketplace?category=games → /?category=games
  */
-export default function MarketplacePage() {
-  return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <Header />
-      <main className="flex-1">
-        <Marketplace />
-      </main>
-      <Footer />
-      {/* Global overlays */}
-      <ProductDetailSheet />
-      <CartSheet />
-    </div>
-  );
+export default function MarketplacePage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(searchParams)) {
+    if (typeof v === "string") params.set(k, v);
+  }
+  const qs = params.toString();
+  redirect(qs ? `/?${qs}` : "/");
 }

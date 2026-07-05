@@ -480,6 +480,12 @@ export function Header() {
     setActiveTab("marketplace");
     setNavFilter(link.category ?? "", link.sort ?? "popular");
     setMobileOpen(false);
+    // Smooth-scroll to the product grid so the user sees the filtered results
+    setTimeout(() => {
+      document
+        .querySelector("[data-product-grid]")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
   };
 
   // Determine the active nav link for highlight state

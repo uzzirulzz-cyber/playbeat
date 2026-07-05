@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 
 /**
- * /ai-tools → /marketplace?category=ai-tools
+ * /ai-tools → /?category=ai-tools
  *
- * Redirects to the marketplace filtered to the AI Tools category.
+ * Redirects to the home page (storefront) filtered to the AI Tools category.
  */
 export default function AIToolsPage() {
-  redirect("/marketplace?category=ai-tools");
+  redirect("/?category=ai-tools");
 }

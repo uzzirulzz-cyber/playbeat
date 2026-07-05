@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 
 /**
- * /games → /marketplace?category=games
+ * /games → /?category=games
  *
- * Redirects to the marketplace filtered to the Games category.
+ * Redirects to the home page (storefront) filtered to the Games category.
  */
 export default function GamesPage() {
-  redirect("/marketplace?category=games");
+  redirect("/?category=games");
 }
