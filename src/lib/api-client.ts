@@ -448,6 +448,33 @@ export const api = {
       error?: string;
     }>(`/woocommerce/orders`),
   // ===== WordPress =====
+  wordpressPlugins: (search?: string, browse?: string) =>
+    apiFetch<{
+      items: Array<{
+        slug: string;
+        name: string;
+        version: string;
+        author: string;
+        rating: number;
+        num_ratings: number;
+        downloads: number;
+        active_installs: number;
+        last_updated: string;
+        short_description: string;
+        homepage: string;
+        download_link: string;
+        icons: { svg: string | null; "1x": string | null; "2x": string | null };
+        banner: { low: string | null; high: string | null };
+        requires: string;
+        tested: string;
+        requires_php: string;
+      }>;
+      total: number;
+      pages: number;
+      browse: string;
+      search: string;
+      wordpressOrgUrl: string;
+    }>(`/wordpress/plugins${search ? `?search=${encodeURIComponent(search)}` : browse ? `?browse=${browse}` : ""}`),
   wordpressPosts: () =>
     apiFetch<{
       configured: boolean;
