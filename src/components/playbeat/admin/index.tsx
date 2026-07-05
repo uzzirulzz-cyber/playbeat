@@ -90,13 +90,16 @@ type ModuleKey =
   | "marketing"
   | "media"
   | "website"
+  | "website-builder"
   | "seo"
   | "ai"
+  | "ai-tools"
   | "developer"
   | "integrations"
   | "security"
   | "settings"
-  | "mobile";
+  | "mobile"
+  | "mobile-app";
 
 interface NavGroup {
   label: string;

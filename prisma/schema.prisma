@@ -90,6 +90,7 @@ model Product {
   fileSize     String?
   version      String?
   changelog    String? // JSON array of {version, date, notes}
+  cover        String? // JSON { type, colors, icon, seed } or image URL
 
   seoTitle       String?
   seoDescription String?

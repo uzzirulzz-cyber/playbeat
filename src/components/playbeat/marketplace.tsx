@@ -548,6 +548,7 @@ export function Marketplace() {
   const searchQuery = usePlaybeatStore((s) => s.searchQuery);
   const navCategory = usePlaybeatStore((s) => s.navCategory);
   const navSort = usePlaybeatStore((s) => s.navSort);
+  const setNavFilter = usePlaybeatStore((s) => s.setNavFilter);
 
   const [query, setQuery] = React.useState<ProductQuery>({
     search: searchQuery || "",

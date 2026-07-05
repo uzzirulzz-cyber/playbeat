@@ -44,9 +44,13 @@ export async function POST(request: NextRequest) {
               status: isSuccess ? "COMPLETED" : "CANCELLED",
             },
           });
-          if (order.paymentId) {
+          // Find the payment record for this order
+          const payment = await db.payment.findUnique({
+            where: { orderId: order.id },
+          }).catch(() => null);
+          if (payment) {
             await db.payment.update({
-              where: { id: order.paymentId },
+              where: { id: payment.id },
               data: {
                 status: isSuccess ? "COMPLETED" : "FAILED",
                 transactionId: result.txnRefNo,
