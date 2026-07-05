@@ -25,12 +25,12 @@ const settingGroups = [
       {
         key: "site_url",
         label: "Site URL",
-        defaultValue: "https://example.com",
+        defaultValue: "https://playbeat.digital",
       },
       {
         key: "support_email",
         label: "Support Email",
-        defaultValue: "support@example.com",
+        defaultValue: "support@playbeat.digital",
       },
       { key: "timezone", label: "Timezone", defaultValue: "UTC" },
     ],
