@@ -150,27 +150,27 @@ export function DeveloperModule() {
             <div className="space-y-3">
               {apiKeys.map((k: any) => (
                 <div
-                  key={k._id ?? k.id}
+                  key={k.id}
                   className="flex items-center gap-3 p-3 bg-muted rounded-lg"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm">{k.name}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <code className="text-xs bg-background px-2 py-0.5 rounded border font-mono">
-                        {visibleKeys.has(k._id ?? k.id)
+                        {visibleKeys.has(k.id)
                           ? k.key
                           : `${k.prefix}${"*".repeat(20)}`}
                       </code>
                       <button
                         onClick={() => {
                           const s = new Set(visibleKeys);
-                          const id = k._id ?? k.id;
+                          const id = k.id;
                           if (s.has(id)) s.delete(id);
                           else s.add(id);
                           setVisibleKeys(s);
                         }}
                       >
-                        {visibleKeys.has(k._id ?? k.id) ? (
+                        {visibleKeys.has(k.id) ? (
                           <EyeOff size={12} />
                         ) : (
                           <Eye size={12} />
@@ -196,7 +196,7 @@ export function DeveloperModule() {
                       variant="ghost"
                       size="sm"
                       className="h-7 text-xs text-destructive"
-                      onClick={() => handleRevokeKey(k._id ?? k.id)}
+                      onClick={() => handleRevokeKey(k.id)}
                     >
                       Revoke
                     </Button>
@@ -231,7 +231,7 @@ export function DeveloperModule() {
             <div className="space-y-3">
               {webhooks.map((w: any) => (
                 <div
-                  key={w._id ?? w.id}
+                  key={w.id}
                   className="flex items-start gap-3 p-3 bg-muted rounded-lg"
                 >
                   <Webhook
@@ -264,7 +264,7 @@ export function DeveloperModule() {
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 text-destructive"
-                      onClick={() => handleDeleteWebhook(w._id ?? w.id)}
+                      onClick={() => handleDeleteWebhook(w.id)}
                     >
                       <Trash2 size={12} />
                     </Button>
@@ -346,6 +346,55 @@ export function DeveloperModule() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Audit Logs */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Recent Activity (Audit Log)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AuditLogs />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function AuditLogs() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-audit-logs"],
+    queryFn: () => api.adminAuditLogs(),
+    staleTime: 30_000,
+  });
+
+  const logs = data?.items || [];
+
+  if (isLoading) return <Skeleton className="h-32 w-full" />;
+  if (logs.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground text-center py-4">
+        No activity logged yet. Actions like creating API keys and webhooks will appear here.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2 max-h-64 overflow-y-auto">
+      {logs.slice(0, 20).map((log: any) => (
+        <div key={log.id} className="flex items-center gap-3 p-2 bg-muted rounded-lg text-xs">
+          <div className="w-2 h-2 rounded-full bg-purple-500 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <span className="font-medium">{log.actorName}</span>{" "}
+            <span className="text-muted-foreground">{log.action}</span>
+            {log.resource && (
+              <span className="text-muted-foreground"> on {log.resource}</span>
+            )}
+          </div>
+          <span className="text-muted-foreground shrink-0">
+            {new Date(log.createdAt).toLocaleString()}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

@@ -17,43 +17,15 @@ import {
   CheckCircle,
   AlertCircle,
   Settings,
+  ExternalLink,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 
-const syncItems = [
-  {
-    label: "Products",
-    count: 248,
-    synced: 246,
-    lastSync: "2 minutes ago",
-    status: "ok",
-  },
-  {
-    label: "Orders",
-    count: 1842,
-    synced: 1842,
-    lastSync: "5 minutes ago",
-    status: "ok",
-  },
-  {
-    label: "Customers",
-    count: 3201,
-    synced: 3198,
-    lastSync: "10 minutes ago",
-    status: "warning",
-  },
-  {
-    label: "Categories",
-    count: 32,
-    synced: 32,
-    lastSync: "1 hour ago",
-    status: "ok",
-  },
-];
-
 export function AdminWooCommerce() {
   const qc = useQueryClient();
+
+  // Fetch real WC data (returns configured: false if not connected)
   const { data: productsData, isLoading } = useQuery({
     queryKey: ["woocommerce-products"],
     queryFn: () => api.woocommerceProducts(),
@@ -67,9 +39,24 @@ export function AdminWooCommerce() {
 
   const wcProducts = productsData?.items || [];
   const wcOrders = ordersData?.items || [];
+  const connected = productsData?.configured ?? false;
+  const error = productsData?.error || ordersData?.error;
+
+  // Real revenue from WC orders
+  const wcRevenue = wcOrders
+    .filter((o: any) => o.status === "completed")
+    .reduce((s: number, o: any) => s + parseFloat(o.total || "0"), 0);
+
+  const handleSync = async () => {
+    toast.success("Syncing WooCommerce data...");
+    await qc.invalidateQueries({ queryKey: ["woocommerce-products"] });
+    await qc.invalidateQueries({ queryKey: ["woocommerce-orders"] });
+    toast.success("Sync complete!");
+  };
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">WooCommerce</h1>
@@ -77,20 +64,15 @@ export function AdminWooCommerce() {
             Manage your WooCommerce integration
           </p>
         </div>
-        <Button
-          onClick={async () => {
-            qc.invalidateQueries({ queryKey: ["woocommerce-products"] });
-            qc.invalidateQueries({ queryKey: ["woocommerce-orders"] });
-            toast.success("Sync started!");
-          }}
-          className="gap-2"
-        >
+        <Button onClick={handleSync} className="gap-2" disabled={!connected}>
           <RefreshCw size={16} />
           Sync Now
         </Button>
       </div>
 
+      {/* Connection + Store Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Connection Status */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -99,38 +81,72 @@ export function AdminWooCommerce() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-sm font-medium text-green-600">
-                Connected
-              </span>
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Store URL</span>
-                <span className="font-mono text-xs">mystore.com</span>
+            {connected ? (
+              <>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                    Connected
+                  </span>
+                  <Badge className="ml-auto bg-green-500/15 text-green-600 dark:text-green-400">
+                    Live
+                  </Badge>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Store URL</span>
+                    <span className="font-mono text-xs">
+                      {process.env.NEXT_PUBLIC_WC_STORE_URL || "Connected store"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Products synced</span>
+                    <span className="font-medium">{wcProducts.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Orders synced</span>
+                    <span className="font-medium">{wcOrders.length}</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                  <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                    Not Connected
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Connect your WooCommerce store to sync products and orders.
+                  Add these to your <code className="text-xs bg-muted px-1.5 py-0.5 rounded">.env</code> file:
+                </p>
+                <pre className="text-[10px] bg-muted rounded-lg p-3 text-muted-foreground overflow-x-auto">
+{`WOOCOMMERCE_STORE_URL=https://your-store.com
+WOOCOMMERCE_CONSUMER_KEY=ck_xxxxx
+WOOCOMMERCE_CONSUMER_SECRET=cs_xxxxx`}
+                </pre>
+                <a
+                  href="https://woocommerce.com/woocommerce/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 mt-3 text-xs text-purple-500 hover:text-purple-400"
+                >
+                  <ExternalLink size={12} />
+                  Get WooCommerce
+                </a>
+              </>
+            )}
+            {error && connected && (
+              <div className="mt-3 flex items-center gap-2 text-xs text-red-500">
+                <AlertCircle size={14} />
+                {error}
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">WC Version</span>
-                <span>8.4.0</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">API Version</span>
-                <span>v3</span>
-              </div>
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="mt-4 gap-2 w-full"
-              onClick={() => toast.info("Opening settings...")}
-            >
-              <Settings size={14} />
-              Configure
-            </Button>
+            )}
           </CardContent>
         </Card>
 
+        {/* Store Summary */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -140,62 +156,90 @@ export function AdminWooCommerce() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: "Products", value: String(wcProducts.length || 248) },
-                { label: "Orders Today", value: String(wcOrders.length || 34) },
-                { label: "Revenue (MTD)", value: "$12,400" },
-                { label: "Customers", value: "3,201" },
-              ].map((stat) => (
-                <div key={stat.label} className="bg-muted rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
-                  <p className="text-lg font-bold">{stat.value}</p>
-                </div>
-              ))}
+              <div className="bg-muted rounded-lg p-3">
+                <p className="text-xs text-muted-foreground">Products</p>
+                <p className="text-lg font-bold">{wcProducts.length}</p>
+              </div>
+              <div className="bg-muted rounded-lg p-3">
+                <p className="text-xs text-muted-foreground">Orders</p>
+                <p className="text-lg font-bold">{wcOrders.length}</p>
+              </div>
+              <div className="bg-muted rounded-lg p-3">
+                <p className="text-xs text-muted-foreground">Revenue</p>
+                <p className="text-lg font-bold">
+                  {wcRevenue > 0 ? `$${wcRevenue.toFixed(2)}` : "—"}
+                </p>
+              </div>
+              <div className="bg-muted rounded-lg p-3">
+                <p className="text-xs text-muted-foreground">Completed</p>
+                <p className="text-lg font-bold">
+                  {wcOrders.filter((o: any) => o.status === "completed").length}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Sync Status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {syncItems.map((item) => (
-              <div
-                key={item.label}
-                className="flex items-center justify-between p-3 bg-muted rounded-lg"
-              >
+      {/* Sync Status — real data only */}
+      {connected && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Sync Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                 <div className="flex items-center gap-3">
-                  {item.status === "ok" ? (
-                    <CheckCircle size={16} className="text-green-500" />
-                  ) : (
-                    <AlertCircle size={16} className="text-yellow-500" />
-                  )}
+                  <CheckCircle size={16} className="text-green-500" />
                   <div>
-                    <p className="text-sm font-medium">{item.label}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Last sync: {item.lastSync}
-                    </p>
+                    <p className="text-sm font-medium">Products</p>
+                    <p className="text-xs text-muted-foreground">Synced from WooCommerce</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold">
-                    {item.synced.toLocaleString()} /{" "}
-                    {item.count.toLocaleString()}
-                  </p>
-                  {item.synced < item.count && (
-                    <p className="text-xs text-yellow-600">
-                      {item.count - item.synced} pending
-                    </p>
-                  )}
-                </div>
+                <p className="text-sm font-semibold">{wcProducts.length}</p>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div className="flex items-center gap-3">
+                  <CheckCircle size={16} className="text-green-500" />
+                  <div>
+                    <p className="text-sm font-medium">Orders</p>
+                    <p className="text-xs text-muted-foreground">Synced from WooCommerce</p>
+                  </div>
+                </div>
+                <p className="text-sm font-semibold">{wcOrders.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent WC Products */}
+      {connected && wcProducts.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Recent Products</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {wcProducts.slice(0, 5).map((p: any) => (
+                <div key={p.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                  <div className="flex items-center gap-3">
+                    {p.images?.[0]?.src && (
+                      <img src={p.images[0].src} alt={p.name} className="w-10 h-10 rounded-lg object-cover" />
+                    )}
+                    <div>
+                      <p className="text-sm font-medium">{p.name}</p>
+                      <p className="text-xs text-muted-foreground">{p.status}</p>
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold">${p.price || "0"}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

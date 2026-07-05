@@ -1,169 +1,196 @@
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Bot, CheckCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Bot, Search, Sparkles, DollarSign, TrendingUp } from "lucide-react";
+import { api, formatPrice } from "@/lib/api-client";
 import { toast } from "sonner";
 
-const models = [
-  {
-    id: "gpt-5",
-    name: "GPT-5",
-    provider: "OpenAI",
-    description: "Most capable, best quality",
-    cost: "High",
-  },
-  {
-    id: "gpt-5-mini",
-    name: "GPT-5 Mini",
-    provider: "OpenAI",
-    description: "Fast and cost-effective",
-    cost: "Low",
-  },
-  {
-    id: "claude-sonnet",
-    name: "Claude Sonnet 4.5",
-    provider: "Anthropic",
-    description: "Excellent reasoning",
-    cost: "Medium",
-  },
-];
-
-const usageData = [
-  { feature: "Content Generation", requests: 1240, tokens: 2480000 },
-  { feature: "Support Bot", requests: 3820, tokens: 7640000 },
-  { feature: "Product Descriptions", requests: 620, tokens: 1240000 },
-  { feature: "Email Drafting", requests: 190, tokens: 380000 },
-];
-
 export function AiToolsModule() {
-  const [selectedModel, setSelectedModel] = React.useState("gpt-5-mini");
-  const [temperature, setTemperature] = React.useState("0.7");
+  const qc = useQueryClient();
+  const [search, setSearch] = React.useState("");
+
+  // Fetch real AI tool products from the database
+  const { data, isLoading } = useQuery({
+    queryKey: ["ai-tools-products", search],
+    queryFn: () => api.products({ search, category: "ai-tools", limit: 48 }),
+    staleTime: 30_000,
+  });
+
+  const products = (data?.items || []).filter((p: any) =>
+    p.type === "AI_TOOL" || p.category?.slug === "ai-tools"
+  );
+
+  const totalRevenue = products.reduce((s: number, p: any) => s + (p.salesCount || 0) * (p.effectivePrice || p.price), 0);
+  const totalSales = products.reduce((s: number, p: any) => s + (p.salesCount || 0), 0);
+
+  const stats = [
+    { label: "AI Tools", value: String(products.length), icon: <Bot size={18} className="text-purple-500" />, bg: "bg-purple-50 dark:bg-purple-950" },
+    { label: "Total Sales", value: String(totalSales), icon: <TrendingUp size={18} className="text-green-500" />, bg: "bg-green-50 dark:bg-green-950" },
+    { label: "Revenue", value: formatPrice(totalRevenue), icon: <DollarSign size={18} className="text-blue-500" />, bg: "bg-blue-50 dark:bg-blue-950" },
+    { label: "Featured", value: String(products.filter((p: any) => p.featured).length), icon: <Sparkles size={18} className="text-amber-500" />, bg: "bg-amber-50 dark:bg-amber-950" },
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="p-2.5 bg-purple-100 dark:bg-purple-950 rounded-xl">
-          <Bot size={22} className="text-purple-600" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">AI Tools</h1>
-          <p className="text-muted-foreground text-sm">
-            Configure AI models and monitor usage
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold">AI Tools</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Manage your AI tool products — ChatGPT, Midjourney, Claude, and more.
+        </p>
       </div>
 
+      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "Total Requests", value: "5,870" },
-          { label: "Tokens Used", value: "11.7M" },
-          { label: "Avg Latency", value: "1.2s" },
-          { label: "Success Rate", value: "99.4%" },
-        ].map((s) => (
-          <Card key={s.label}>
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-              <p className="text-xl font-bold">{s.value}</p>
-            </CardContent>
-          </Card>
-        ))}
+        {isLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))
+        ) : (
+          stats.map((stat) => (
+            <Card key={stat.label}>
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                    <p className="text-xl font-bold mt-1">{stat.value}</p>
+                  </div>
+                  <div className={`p-2.5 rounded-lg ${stat.bg}`}>{stat.icon}</div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search AI tools..."
+          className="pl-9"
+        />
+      </div>
+
+      {/* Products grid */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-48 rounded-xl" />
+          ))}
+        </div>
+      ) : products.length === 0 ? (
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Model Configuration</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>Default Model</Label>
-              <Select value={selectedModel} onValueChange={setSelectedModel}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {models.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.name} ({m.provider})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {models.find((m) => m.id === selectedModel) && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {models.find((m) => m.id === selectedModel)!.description}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label>Temperature: {temperature}</Label>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={temperature}
-                onChange={(e) => setTemperature(e.target.value)}
-                className="w-full mt-1"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Precise (0)</span>
-                <span>Creative (1)</span>
-              </div>
-            </div>
+          <CardContent className="p-12 text-center">
+            <Bot className="mx-auto mb-3 size-12 text-muted-foreground" />
+            <p className="font-medium">No AI tools found</p>
+            <p className="text-sm text-muted-foreground">
+              Add AI tool products from the Products section
+            </p>
             <Button
-              onClick={() => toast.success("AI settings saved")}
-              className="gap-2 w-full"
+              className="mt-4"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("admin-navigate", { detail: "products" }));
+              }}
             >
-              <CheckCircle size={14} />
-              Save Settings
+              Go to Products
             </Button>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Usage by Feature</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {usageData.map((u) => (
-                <div key={u.feature}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span>{u.feature}</span>
-                    <span className="text-muted-foreground">
-                      {u.requests.toLocaleString()} requests
-                    </span>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {products.map((p: any) => (
+            <Card key={p.id} className="overflow-hidden">
+              {/* Cover image */}
+              <div className="aspect-[16/9] overflow-hidden bg-muted">
+                {p.cover && (p.cover.startsWith("http") || p.cover.startsWith("data:")) ? (
+                  <img src={p.cover} alt={p.title} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Bot className="size-10 text-muted-foreground" />
                   </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full"
-                      style={{
-                        width: `${(u.requests / 3820) * 100}%`,
-                      }}
-                    />
-                  </div>
+                )}
+              </div>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="text-sm font-semibold line-clamp-1">{p.title}</h3>
+                  {p.featured && (
+                    <Badge className="bg-amber-400/20 text-amber-600 text-[9px] shrink-0">
+                      ★ Featured
+                    </Badge>
+                  )}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <p className="text-xs text-muted-foreground line-clamp-2">
+                  {p.shortDescription || p.description || "AI tool product"}
+                </p>
+                {/* Variants */}
+                {(() => {
+                  let variants: string[] = [];
+                  try {
+                    const raw = (p as any).variants;
+                    if (raw) variants = typeof raw === "string" ? JSON.parse(raw) : raw;
+                  } catch {}
+                  if (variants.length === 0) return null;
+                  return (
+                    <div className="flex flex-wrap gap-1">
+                      {variants.slice(0, 4).map((v) => (
+                        <Badge key={v} variant="outline" className="text-[9px]">
+                          {v}
+                        </Badge>
+                      ))}
+                      {variants.length > 4 && (
+                        <Badge variant="outline" className="text-[9px]">
+                          +{variants.length - 4} more
+                        </Badge>
+                      )}
+                    </div>
+                  );
+                })()}
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <div>
+                    <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                      {formatPrice(p.effectivePrice || p.price)}
+                    </span>
+                    {p.discountPrice && (
+                      <span className="ml-1 text-xs text-muted-foreground line-through">
+                        Rs {p.regularPrice || p.price}
+                      </span>
+                    )}
+                  </div>
+                  <Badge variant="secondary" className="text-[9px]">
+                    {p.salesCount || 0} sold
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Refresh */}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            qc.invalidateQueries({ queryKey: ["ai-tools-products"] });
+            toast.success("Refreshed AI tools");
+          }}
+        >
+          Refresh
+        </Button>
       </div>
     </div>
   );
