@@ -1,31 +1,76 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseCallback } from "@/lib/jazzcash";
+import { db } from "@/lib/db";
 
 /**
  * GET/POST /api/v1/payments/jazzcash/return
  *
  * The customer is redirected here after completing (or cancelling) payment
- * on the JazzCash payment page. We read the callback params, verify the
- * signature, and redirect to the storefront with a success/failure status.
+ * on the JazzCash payment page. We:
+ *   1. Read the callback params
+ *   2. Verify the signature
+ *   3. Update the order status in the DB (if we can find the order)
+ *   4. Redirect to the storefront with payment status + order details
  *
- * The redirect URL is built from the REQUEST's origin (the server that
- * received the callback) — NOT from pp_ReturnURL or a hardcoded domain.
- * This ensures the customer is always sent back to the correct storefront.
+ * The redirect URL uses the request's own origin so it always goes back
+ * to the correct storefront domain.
  */
-function handleReturn(params: Record<string, string>, requestUrl: string) {
+async function handleReturn(params: Record<string, string>, requestUrl: string) {
   const result = parseCallback(params);
 
   // JazzCash response codes: 000 = success, others = failure
   const isSuccess = result.verified && result.status === "000";
 
-  const statusParam = isSuccess ? "success" : "failed";
-  const msgParam = encodeURIComponent(result.message || "Payment processed");
+  // Try to update the order in the DB based on pp_BillReference (order number)
+  const billRef = params.pp_BillReference || result.billReference;
+  if (billRef) {
+    try {
+      const order = await db.order.findFirst({
+        where: { orderNumber: billRef },
+        include: { items: { include: { product: true } }, payment: true },
+      });
 
-  // Build redirect URL from the request's own origin — NOT pp_ReturnURL
-  // (pp_ReturnURL might be set to a different domain in .env, or a
-  // placeholder. The customer should go back to THIS server's storefront.)
+      if (order) {
+        // Update order status
+        await db.order.update({
+          where: { id: order.id },
+          data: { status: isSuccess ? "COMPLETED" : "CANCELLED" },
+        });
+
+        // Update payment record
+        const payment = await db.payment.findUnique({
+          where: { orderId: order.id },
+        }).catch(() => null);
+
+        if (payment) {
+          await db.payment.update({
+            where: { id: payment.id },
+            data: {
+              status: isSuccess ? "COMPLETED" : "FAILED",
+              transactionId: result.txnRefNo || payment.transactionId,
+            },
+          });
+        }
+
+        console.log(`[jazzcash-return] order ${billRef} → ${isSuccess ? "COMPLETED" : "CANCELLED"}`);
+      }
+    } catch (dbErr) {
+      // Non-fatal — don't block the redirect
+      console.error("[jazzcash-return] DB update failed (non-fatal):", dbErr);
+    }
+  }
+
+  // Build redirect URL from the request's own origin
   const origin = new URL(requestUrl).origin;
+  const statusParam = isSuccess ? "success" : "failed";
+  const msgParam = encodeURIComponent(result.message || (isSuccess ? "Payment successful" : "Payment failed"));
+
   const redirectUrl = new URL(`/?payment=${statusParam}&ref=${result.txnRefNo}&msg=${msgParam}`, origin);
+
+  // Add order number if we have it
+  if (billRef) {
+    redirectUrl.searchParams.set("order", billRef);
+  }
 
   // Add extended response fields if available
   if (result.retrievalReferenceNo) {
