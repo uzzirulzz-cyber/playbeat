@@ -13,6 +13,7 @@ import {
   Download,
   PartyPopper,
   X,
+  Lock,
 } from "lucide-react";
 import {
   Sheet,
