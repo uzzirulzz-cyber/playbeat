@@ -53,6 +53,11 @@ interface ProductCoverProps {
 function parseCover(c: ProductCoverProps["cover"]): ProductCover | null {
   if (!c) return null;
   if (typeof c === "string") {
+    // Check if it's a plain image URL (starts with http or data:)
+    if (c.startsWith("http://") || c.startsWith("https://") || c.startsWith("data:")) {
+      return { type: "image", image: c, colors: [], icon: "Package", seed: "" };
+    }
+    // Try parsing as JSON cover object
     try {
       return JSON.parse(c) as ProductCover;
     } catch {
