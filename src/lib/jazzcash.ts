@@ -90,6 +90,7 @@ export interface JazzCashPaymentParams {
   billReference: string;
   customerEmail?: string;
   customerMobile?: string;
+  returnUrl?: string; // explicit return URL — overrides .env
 }
 
 /** Build the full parameter set for a JazzCash transaction request. */
@@ -99,7 +100,9 @@ export function buildTransactionParams(
   const merchantId = process.env.JAZZCASH_MERCHANT_ID!;
   const password = process.env.JAZZCASH_PASSWORD!;
   const salt = process.env.JAZZCASH_INTEGRITY_SALT!;
+  // Use explicit returnUrl if provided, otherwise fall back to .env
   const returnUrl =
+    payment.returnUrl ||
     process.env.JAZZCASH_RETURN_URL ||
     "https://playbeat.digital/api/v1/payments/jazzcash/return";
 

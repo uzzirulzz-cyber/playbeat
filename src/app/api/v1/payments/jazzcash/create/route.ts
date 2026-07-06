@@ -38,6 +38,13 @@ export async function POST(request: NextRequest) {
     return error("Bill reference (order ID) is required", 422);
   }
 
+  // Build return URL from the REQUEST's origin — NOT from .env
+  // This ensures JazzCash redirects back to the actual server that
+  // is running (localhost, preview URL, or production domain).
+  // The .env JAZZCASH_RETURN_URL is only a fallback.
+  const origin = new URL(request.url).origin;
+  const returnUrl = `${origin}/api/v1/payments/jazzcash/return`;
+
   const txnRefNo = generateTxnRefNo();
   const { params, gatewayUrl } = buildTransactionParams({
     txnRefNo,
@@ -46,6 +53,7 @@ export async function POST(request: NextRequest) {
     billReference: String(billReference).slice(0, 24),
     customerEmail: customerEmail || undefined,
     customerMobile: customerMobile || undefined,
+    returnUrl,
   });
 
   return ok({
