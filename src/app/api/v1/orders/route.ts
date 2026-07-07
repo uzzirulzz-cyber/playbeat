@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     customerName: v.required("Customer name"),
     customerEmail: v.email(),
     provider: (val) =>
-      !val || ["STRIPE", "PAYPAL", "LEMON_SQUEEZY", "PADDLE", "CRYPTO"].includes(val as string)
+      !val || ["JAZZCASH", "CRYPTO", "STRIPE", "PAYPAL", "LEMON_SQUEEZY", "PADDLE"].includes(val as string)
         ? null
         : "Invalid payment provider",
   });
