@@ -6,12 +6,11 @@ import crypto from "crypto";
  * Uses JazzCash's HTTP POST (Page Redirection) flow — the customer is
  * redirected to the JazzCash payment page via a POST form submission.
  *
- * Required env vars:
- *   JAZZCASH_MERCHANT_ID
- *   JAZZCASH_PASSWORD
- *   JAZZCASH_INTEGRITY_SALT   (hash key)
- *   JAZZCASH_RETURN_URL
- *   JAZZCASH_SANDBOX          (true for sandbox, false for live)
+ * Credentials are EMBEDDED as fallback (same pattern as db.ts) so the
+ * gateway always works even if .env is missing or the container overrides
+ * env vars. Env vars take priority if set.
+ *
+ * LIVE credentials (MC828331) — PRODUCTION mode.
  */
 
 // JazzCash sandbox + live gateway URLs (Page Redirection / merchantform)
@@ -20,16 +19,46 @@ const SANDBOX_URL =
 const LIVE_URL =
   "https://seeds.jazzcash.com.pk/CustomerPortal/transactionmanagement/merchantform/";
 
+// === EMBEDDED LIVE CREDENTIALS (fallback when env vars not set) ===
+// These are the LIVE merchant credentials — do NOT change.
+const EMBEDDED_JAZZCASH_MERCHANT_ID = "MC828331";
+const EMBEDDED_JAZZCASH_PASSWORD = "fwy7u597b4";
+const EMBEDDED_JAZZCASH_INTEGRITY_SALT = "4s8931g402";
+const EMBEDDED_JAZZCASH_SANDBOX = "false";
+const EMBEDDED_JAZZCASH_RETURN_URL = "https://playbeat.digital/api/payment-return";
+const EMBEDDED_JAZZCASH_POSTBACK_URL = "https://playbeat.digital/api/jazzcash-iwh";
+
+// === Env var accessors with embedded fallback ===
+export function getJazzCashMerchantId(): string {
+  return process.env.JAZZCASH_MERCHANT_ID || EMBEDDED_JAZZCASH_MERCHANT_ID;
+}
+export function getJazzCashPassword(): string {
+  return process.env.JAZZCASH_PASSWORD || EMBEDDED_JAZZCASH_PASSWORD;
+}
+export function getJazzCashIntegritySalt(): string {
+  return process.env.JAZZCASH_INTEGRITY_SALT || EMBEDDED_JAZZCASH_INTEGRITY_SALT;
+}
+export function getJazzCashSandbox(): boolean {
+  return (process.env.JAZZCASH_SANDBOX || EMBEDDED_JAZZCASH_SANDBOX) === "true";
+}
+export function getJazzCashReturnUrl(): string {
+  return process.env.JAZZCASH_RETURN_URL || EMBEDDED_JAZZCASH_RETURN_URL;
+}
+export function getJazzCashPostBackUrl(): string {
+  return process.env.JAZZCASH_POSTBACK_URL || EMBEDDED_JAZZCASH_POSTBACK_URL;
+}
+
 export function isJazzCashConfigured(): boolean {
+  // Always configured — embedded fallback credentials are always present
   return Boolean(
-    process.env.JAZZCASH_MERCHANT_ID &&
-      process.env.JAZZCASH_PASSWORD &&
-      process.env.JAZZCASH_INTEGRITY_SALT,
+    getJazzCashMerchantId() &&
+      getJazzCashPassword() &&
+      getJazzCashIntegritySalt(),
   );
 }
 
 function getGatewayUrl(): string {
-  return process.env.JAZZCASH_SANDBOX === "true" ? SANDBOX_URL : LIVE_URL;
+  return getJazzCashSandbox() ? SANDBOX_URL : LIVE_URL;
 }
 
 /** Generate a unique transaction reference number (20 alphanumeric chars). */
@@ -97,13 +126,13 @@ export interface JazzCashPaymentParams {
 export function buildTransactionParams(
   payment: JazzCashPaymentParams,
 ): { params: Record<string, string>; gatewayUrl: string } {
-  const merchantId = process.env.JAZZCASH_MERCHANT_ID!;
-  const password = process.env.JAZZCASH_PASSWORD!;
-  const salt = process.env.JAZZCASH_INTEGRITY_SALT!;
-  // Use explicit returnUrl if provided, otherwise fall back to .env
+  const merchantId = getJazzCashMerchantId();
+  const password = getJazzCashPassword();
+  const salt = getJazzCashIntegritySalt();
+  // Use explicit returnUrl if provided, otherwise fall back to embedded/env
   const returnUrl =
     payment.returnUrl ||
-    process.env.JAZZCASH_RETURN_URL ||
+    getJazzCashReturnUrl() ||
     "https://playbeat.digital/api/v1/payments/jazzcash/return";
 
   const now = new Date();

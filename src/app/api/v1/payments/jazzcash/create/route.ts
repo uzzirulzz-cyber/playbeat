@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ok, error, applyRateLimit } from "@/lib/api";
 import {
   isJazzCashConfigured,
+  getJazzCashSandbox,
   generateTxnRefNo,
   buildTransactionParams,
 } from "@/lib/jazzcash";
@@ -12,6 +13,9 @@ import {
  * Creates a JazzCash transaction and returns the gateway URL + form params.
  * The frontend POSTs these params to the gateway URL to redirect the customer
  * to the JazzCash payment page.
+ *
+ * Credentials are EMBEDDED in src/lib/jazzcash.ts (with env var override).
+ * This route ALWAYS works — no .env required.
  */
 export async function POST(request: NextRequest) {
   const limited = applyRateLimit(request, 20);
@@ -41,7 +45,6 @@ export async function POST(request: NextRequest) {
   // Build return URL from the REQUEST's origin — NOT from .env
   // This ensures JazzCash redirects back to the actual server that
   // is running (localhost, preview URL, or production domain).
-  // The .env JAZZCASH_RETURN_URL is only a fallback.
   const origin = new URL(request.url).origin;
   const returnUrl = `${origin}/api/v1/payments/jazzcash/return`;
 
@@ -60,7 +63,8 @@ export async function POST(request: NextRequest) {
     gatewayUrl,
     params,
     txnRefNo,
-    sandbox: process.env.JAZZCASH_SANDBOX === "true",
+    sandbox: getJazzCashSandbox(),
+    merchantId: params.pp_MerchantID,
     message: "Redirect the customer to the JazzCash payment page via POST form.",
   });
 }
