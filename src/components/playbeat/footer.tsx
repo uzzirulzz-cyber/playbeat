@@ -184,7 +184,21 @@ export function Footer() {
                 className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-primary"
               >
                 <Mail className="size-3.5" />
-                info@playbeat.digital
+                info@playbeat.digital (General)
+              </a>
+              <a
+                href="mailto:support@playbeat.digital"
+                className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-primary"
+              >
+                <Mail className="size-3.5" />
+                support@playbeat.digital (Support)
+              </a>
+              <a
+                href="mailto:director@playbeat.digital"
+                className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-primary"
+              >
+                <Mail className="size-3.5" />
+                director@playbeat.digital (Director)
               </a>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <MapPin className="size-3.5" />

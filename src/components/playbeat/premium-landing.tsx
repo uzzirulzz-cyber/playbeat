@@ -671,7 +671,9 @@ function Contact() {
           <div className="space-y-4">
             {[
               { icon: MessageCircle, label: "WhatsApp", value: "0332 102 9333", href: "https://wa.me/923321029333" },
-              { icon: Mail, label: "Email", value: "info@playbeat.digital", href: "mailto:info@playbeat.digital" },
+              { icon: Mail, label: "Email (General)", value: "info@playbeat.digital", href: "mailto:info@playbeat.digital" },
+              { icon: Mail, label: "Email (Support)", value: "support@playbeat.digital", href: "mailto:support@playbeat.digital" },
+              { icon: Mail, label: "Email (Director)", value: "director@playbeat.digital", href: "mailto:director@playbeat.digital" },
               { icon: Phone, label: "Phone", value: "+92 332 102 9333", href: "tel:+923321029333" },
               { icon: MapPin, label: "Location", value: "Karachi, Pakistan", href: "#" },
             ].map((c) => (

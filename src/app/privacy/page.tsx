@@ -156,8 +156,16 @@ export default function PrivacyPage() {
                 To exercise these rights, email{" "}
                 <a href="mailto:info@playbeat.digital" className="text-accent hover:underline">
                   info@playbeat.digital
-                </a>
-                .
+                </a>{" "}
+                (General),{" "}
+                <a href="mailto:support@playbeat.digital" className="text-accent hover:underline">
+                  support@playbeat.digital
+                </a>{" "}
+                (Support), or{" "}
+                <a href="mailto:director@playbeat.digital" className="text-accent hover:underline">
+                  director@playbeat.digital
+                </a>{" "}
+                (Director).
               </p>
             </>
           ),

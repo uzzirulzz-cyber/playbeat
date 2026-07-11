@@ -85,7 +85,21 @@ export function LegalPage({ title, subtitle, lastUpdated, sections }: LegalPageP
               >
                 info@playbeat.digital
               </a>{" "}
-              or WhatsApp{" "}
+              (General),{" "}
+              <a
+                href="mailto:support@playbeat.digital"
+                className="font-medium text-accent hover:underline"
+              >
+                support@playbeat.digital
+              </a>{" "}
+              (Support), or{" "}
+              <a
+                href="mailto:director@playbeat.digital"
+                className="font-medium text-accent hover:underline"
+              >
+                director@playbeat.digital
+              </a>{" "}
+              (Director). You can also reach us on WhatsApp{" "}
               <a
                 href="https://wa.me/923321029333"
                 className="font-medium text-accent hover:underline"

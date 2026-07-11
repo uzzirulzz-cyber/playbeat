@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       id: "faq-4",
       question: "How do I get support?",
       answer:
-        "Email us at support@example.com or use the contact form on this site. We typically respond within one business day.",
+        "Email us at support@playbeat.digital or use the contact form on this site. We typically respond within one business day.",
       category: "Support",
       published: true,
       order: 4,

@@ -1606,3 +1606,38 @@ The admin Products module at `src/components/playbeat/admin/products.tsx` had be
 - The new upload endpoint writes files directly to `/public/uploads/products/`. This works in dev and in `next start`, but if the project ever moves to a serverless/edge deploy where `/public` is read-only, switch the endpoint to write to a persistent blob store (S3, R2, etc.) and update `adminProductImageUpload` accordingly.
 - The cart-sheet.tsx TS error (`cryptoCreate` does not exist on the api object) is pre-existing and unrelated — left untouched per scope.
 - The discount price rendering in the table is a small enhancement that came for free with the discountPrice field being restored — it mirrors the marketplace strikethrough pattern. Easy to revert if it's not desired.
+
+---
+
+## Task: update-emails — Add support@ and director@ emails alongside info@ across the site
+
+### Summary
+Added `support@playbeat.digital` and `director@playbeat.digital` alongside the existing `info@playbeat.digital` in all customer-facing contact sections. Every email is a clickable `mailto:` link. The original `info@` was preserved (constraint: don't remove, just add). Used a consistent label convention — `(General)` for info@, `(Support)` for support@, `(Director)` for director@ — across all files.
+
+### Files modified
+1. **`src/components/playbeat/footer.tsx`** — In the brand-column contact block, added two new `<a href="mailto:...">` rows (with `Mail` icon) below the existing info@ entry. Labels: `info@playbeat.digital (General)`, `support@playbeat.digital (Support)`, `director@playbeat.digital (Director)`. The footer bottom-bar `mailto:info@playbeat.digital` "Contact us" icon button was left as-is (single icon button — keeping info@ as the default for the icon's hover affordance).
+
+2. **`src/components/playbeat/legal-page.tsx`** — Rewrote the "Questions?" contact footer paragraph to list all three emails inline with role labels: "Contact us at info@playbeat.digital (General), support@playbeat.digital (Support), or director@playbeat.digital (Director). You can also reach us on WhatsApp 0332 102 9333." Each email is its own `<a>` with `mailto:` href and `text-accent hover:underline`. This change automatically flows through to the Terms and Refund policy pages (and any other consumer of `LegalPage`) via the shared component.
+
+3. **`src/app/privacy/page.tsx`** — In section 8 "Your Rights", updated the "To exercise these rights, email ..." paragraph to list all three emails with role labels. Same `<a>` + `mailto:` pattern as legal-page.
+
+4. **`src/app/refund-policy/page.tsx`** — In section 4 "How to Request a Refund", restructured the contact block to show support@ as primary: three `<p>` rows with `<strong>` labels — "Email (Support — primary)", "Email (General)", "Email (Director)". Existing info@ kept; WhatsApp line kept above.
+
+5. **`src/app/api/v1/faq/route.ts`** — Replaced `support@example.com` with `support@playbeat.digital` in the faq-4 answer string. No other changes.
+
+6. **`src/components/playbeat/premium-landing.tsx`** — In the Contact section's contact-card array, relabeled the existing `Email` card to `Email (General)` and added two new entries (`Email (Support)` → `support@playbeat.digital`, `Email (Director)` → `director@playbeat.digital`), all using the `Mail` icon and `mailto:` hrefs. Each renders as its own card via the existing `.map()`.
+
+### Skipped / not found
+- **`src/components/playbeat/storefront-compliance.tsx`** — **does not exist** in the repo. Verified with `Glob` (zero matches for `**/storefront*`), `Grep` for the filename (zero matches), and `Grep` for `const BUSINESS` / `BUSINESS :` patterns (zero matches anywhere in `src/`). No `BUSINESS` object exists in any other file. Likely the task was authored against a not-yet-created (or renamed) compliance component. Recommend either creating this file from scratch if compliance data is needed, or repointing the task to a different component if one was intended. No edits made to a non-existent file.
+
+### Verification
+- `bun run lint` → exits 0, zero warnings, zero errors.
+- `rg -n "support@playbeat\.digital" src/` → 11 hits across the 5 modified files plus 1 pre-existing hit in `src/components/playbeat/admin/settings.tsx` (AdminConsole email setting default — was already `support@playbeat.digital`, untouched per scope).
+- `rg -n "director@playbeat\.digital" src/` → 9 hits across the 5 modified files (no pre-existing references).
+- `rg -n "support@example\.com" src/` → zero matches (exit 1), confirming the only `@example.com` placeholder has been replaced.
+- `rg -n "info@playbeat\.digital" src/` → confirms info@ still present in footer.tsx, legal-page.tsx, privacy/page.tsx, refund-policy/page.tsx, premium-landing.tsx, footer.tsx (icon button), plus seed.ts (vendor seed — out of scope).
+
+### Notes for future runs
+- The role-label convention `(General) / (Support) / (Director)` is applied as a visible text suffix in `footer.tsx`, as a parenthetical in `legal-page.tsx` / `privacy/page.tsx`, as a `<strong>` label prefix in `refund-policy/page.tsx`, and as a card label in `premium-landing.tsx`. Each format was chosen to fit the surrounding UI naturally — easy to unify further if a single canonical display format is later desired.
+- The footer's bottom-bar icon button (the `Send` icon next to the social icons) still points to `mailto:info@playbeat.digital`. Left as-is because it's a single icon button with no visible label; if a "contact" dropdown is desired, that's a separate UX change.
+- `src/components/playbeat/admin/settings.tsx` already had `support@playbeat.digital` as a default value for some admin email setting — pre-existing, untouched. If the admin settings panel needs a `directorEmail` field added too, that's a separate task (out of scope for "across all contact sections" — admin console isn't customer-facing).

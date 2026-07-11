@@ -93,9 +93,21 @@ export default function RefundPolicyPage() {
                 </a>
               </p>
               <p>
-                <strong>Email:</strong>{" "}
+                <strong>Email (Support — primary):</strong>{" "}
+                <a href="mailto:support@playbeat.digital" className="text-accent hover:underline">
+                  support@playbeat.digital
+                </a>
+              </p>
+              <p>
+                <strong>Email (General):</strong>{" "}
                 <a href="mailto:info@playbeat.digital" className="text-accent hover:underline">
                   info@playbeat.digital
+                </a>
+              </p>
+              <p>
+                <strong>Email (Director):</strong>{" "}
+                <a href="mailto:director@playbeat.digital" className="text-accent hover:underline">
+                  director@playbeat.digital
                 </a>
               </p>
               <p>
