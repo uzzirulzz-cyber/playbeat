@@ -15,10 +15,11 @@ const SANDBOX_BASE = "https://api-m.sandbox.paypal.com";
 const LIVE_BASE = "https://api-m.paypal.com";
 
 // === EMBEDDED LIVE CREDENTIALS (fallback when env vars not set) ===
+// App: PLAYBEAT STORE
 const EMBEDDED_PAYPAL_CLIENT_ID =
-  "Ab_aBQ-cWw7sD-MBpP7MecrgJEjwHLtRH9EYVCC8CnnJNBXw6Eono5UdOXyn-Ot92PUXF-9j7XmwI_o6";
+  "ASNEGZyWyR7586zcNMNTI418MAVhO9qgcqWf0_AB5RfldicRSVB-9VlXim_K3vxBwVic2kCubxJX5Sjg";
 const EMBEDDED_PAYPAL_SECRET =
-  "EEH0oo-zIctPxJtlHK5CJC8rpnu_l7I3LG5gOdpCzD4HNiPFRIjGpKfxfjDU_YJIMhzKYNvH81osiPNU";
+  "EIgmkgORO5Fe8Fl9HshCARQXD1rgRvdTmY6qnc_JcxCb5cMaiNbpYKxBv92N_wCJzpTVsvOhOUL3n7Cn";
 const EMBEDDED_PAYPAL_SANDBOX = "false"; // LIVE mode — real payments
 
 // === Env var accessors with embedded fallback ===
