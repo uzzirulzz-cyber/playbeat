@@ -14,6 +14,7 @@ import {
   PartyPopper,
   X,
   Lock,
+  Upload,
 } from "lucide-react";
 import {
   Sheet,
