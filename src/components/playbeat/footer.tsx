@@ -60,6 +60,8 @@ const CATEGORY_LINKS: NavLink[] = [
 // Payment methods accepted — JazzCash (default) + PayPal + cryptocurrency
 const PAYMENTS = [
   "JazzCash",
+  "Bank Alfalah",
+  "Easypaisa",
   "PayPal",
   "Bitcoin (BTC)",
   "Ethereum (ETH)",

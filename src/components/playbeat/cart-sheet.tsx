@@ -41,9 +41,11 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const PROVIDERS = [
-  { value: "JAZZCASH", label: "JazzCash — Mobile Wallet / Card" },
+  { value: "JAZZCASH", label: "JazzCash — Mobile Wallet / Card (Default)" },
+  { value: "BANK_ALFALAH", label: "Bank Alfalah — IBFT / Cash Deposit" },
+  { value: "EASYPAISA", label: "Easypaisa — Mobile Wallet" },
   { value: "PAYPAL", label: "PayPal — International / Cards" },
-  { value: "CRYPTO", label: "Crypto (Binance) — BTC/ETH/USDT" },
+  { value: "CRYPTO", label: "Crypto — BTC/ETH/USDT/USDC" },
 ];
 
 function CartRow({
