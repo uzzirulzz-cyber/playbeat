@@ -163,6 +163,43 @@ export function AdminMobileApp() {
         </Button>
       </div>
 
+      {/* PWA Install Section — scan QR to install admin app */}
+      <Card className="border-primary/30 bg-primary/5">
+        <CardContent className="flex flex-col items-center gap-4 p-6 sm:flex-row">
+          <div className="shrink-0">
+            <img
+              src="/icons/admin-qr.png"
+              alt="Scan to install PlayBeat Admin"
+              className="size-40 rounded-lg border-2 border-primary/30 bg-white p-2"
+            />
+          </div>
+          <div className="flex-1 text-center sm:text-left">
+            <h3 className="text-lg font-bold">Install Admin App</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Scan this QR code with your phone camera to install the PlayBeat Admin app on your Android or iOS device. Works offline, fullscreen, just like a native app.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Badge variant="secondary" className="gap-1">
+                <CheckCircle2 className="size-3" /> Offline ready
+              </Badge>
+              <Badge variant="secondary" className="gap-1">
+                <Smartphone className="size-3" /> Fullscreen PWA
+              </Badge>
+              <Badge variant="secondary" className="gap-1">
+                <Bell className="size-3" /> Push notifications
+              </Badge>
+            </div>
+            <a
+              href="/admin"
+              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              <Download className="size-4" />
+              Open Admin App
+            </a>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
