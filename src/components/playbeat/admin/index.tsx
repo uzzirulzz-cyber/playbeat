@@ -19,6 +19,7 @@ import {
   FileText as WordPressIcon,
   FileCheck,
   Megaphone,
+  RotateCcw,
   Image as ImageIcon,
   Layout,
   Search,
@@ -580,6 +581,29 @@ export function AdminConsole() {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"
+              onClick={async () => {
+                if (!confirm("⚠️ RESET ALL DATA?\n\nThis permanently deletes:\n• All orders\n• All payments\n• All expenses\n• All notifications\n• All payment submissions\n\nProducts, users, coupons, and settings are PRESERVED.\n\nThis cannot be undone.")) return;
+                try {
+                  const res = await fetch("/api/v1/admin/analytics/reset", { method: "POST" });
+                  const data = await res.json();
+                  if (data.success) {
+                    toast.success(`Reset complete — cleared ${data.data.cleared.orders} orders, ${data.data.cleared.payments} payments, ${data.data.cleared.expenses} expenses`);
+                    window.location.reload();
+                  } else {
+                    toast.error("Reset failed");
+                  }
+                } catch {
+                  toast.error("Reset failed");
+                }
+              }}
+            >
+              <RotateCcw className="size-3.5" />
+              <span className="hidden sm:inline">Reset All</span>
+            </Button>
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="size-4" />
               <span className="absolute right-1 top-1 size-1.5 rounded-full bg-blue-400" />
