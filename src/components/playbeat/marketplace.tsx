@@ -544,6 +544,51 @@ function FilterBar({
   );
 }
 
+// ─── Popular Section — featured products carousel ───────────────────────
+function PopularSection() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["products-featured"],
+    queryFn: () => api.products({ featured: true, limit: 8, sort: "popular" } as any),
+    staleTime: 60_000,
+  });
+
+  const items = data?.items ?? [];
+
+  if (isLoading && items.length === 0) return null;
+  if (items.length === 0) return null;
+
+  return (
+    <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">
+            🔥 Popular
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Most loved by our customers
+          </p>
+        </div>
+        <Badge variant="secondary" className="gap-1">
+          <Star className="size-3" />
+          {items.length} featured
+        </Badge>
+      </div>
+
+      {/* Horizontal scroll on mobile, grid on desktop */}
+      <div className="flex gap-4 overflow-x-auto pb-4 pb-scrollbar sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 sm:overflow-visible">
+        {items.map((p, i) => (
+          <div
+            key={p.id}
+            className="min-w-[200px] shrink-0 sm:min-w-0"
+          >
+            <ProductCard product={p} index={i} />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function Marketplace() {
   const searchQuery = usePlaybeatStore((s) => s.searchQuery);
   const navCategory = usePlaybeatStore((s) => s.navCategory);
@@ -592,6 +637,9 @@ export function Marketplace() {
   return (
     <div>
       <Hero />
+
+      {/* Popular section — featured products */}
+      <PopularSection />
 
       {/* Brand strip 1 — luxury promo (after hero) */}
       <BrandStrip
