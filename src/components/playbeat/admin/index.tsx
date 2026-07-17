@@ -20,6 +20,7 @@ import {
   FileCheck,
   Megaphone,
   RotateCcw,
+  Share2,
   Image as ImageIcon,
   Layout,
   Search,
@@ -56,6 +57,7 @@ import { AdminWordPress } from "./wordpress";
 import { AdminJazzCash } from "./jazzcash";
 import { AdminPayments } from "./payments";
 import { PaymentSubmissions } from "./payment-submissions";
+import { SocialMediaModule } from "./social-media";
 import { AdminReports } from "./reports";
 import { AdminMarketing } from "./marketing";
 import { AdminMedia } from "./media";
@@ -89,7 +91,7 @@ type ModuleKey =
   | "support"
   | "iptv"
   | "finance"
-  | "payments" | "payment-submissions"
+  | "payments" | "payment-submissions" | "social-media"
   | "reports"
   | "marketing"
   | "media"
@@ -147,6 +149,7 @@ const NAV_GROUPS: NavGroup[] = [
       { key: "finance", label: "Finance", icon: DollarSign },
       { key: "payments", label: "Payment Gateways", icon: CreditCard },
       { key: "payment-submissions", label: "Payment Proof", icon: FileCheck },
+      { key: "social-media", label: "Social Media", icon: Share2 },
       { key: "jazzcash", label: "JazzCash", icon: CreditCard },
       { key: "reports", label: "Reports", icon: FileText },
     ],
@@ -477,6 +480,8 @@ export function AdminConsole() {
         return <AdminJazzCash />;
       case "payments":
       case "payment-submissions":
+      case "social-media":
+        return <SocialMediaModule />;
         return <PaymentSubmissions />;
         return <AdminPayments />;
       case "reports":
