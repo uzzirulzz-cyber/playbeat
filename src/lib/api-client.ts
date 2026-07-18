@@ -927,6 +927,85 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+
+  // ===== Admin Marketing Campaigns =====
+  adminCampaigns: () =>
+    apiFetch<{
+      items: Array<{
+        id: string;
+        name: string;
+        type: string;
+        status: string;
+        sentCount: number;
+        openRate: number;
+        clickCount: number;
+        content: string | null;
+        createdAt: string;
+        updatedAt: string;
+      }>;
+    }>(`/admin/campaigns`),
+  adminCampaignCreate: (payload: {
+    name: string;
+    type: "email" | "push" | "social" | "sms";
+    content?: string;
+    status?: "draft" | "active" | "paused" | "completed";
+  }) =>
+    apiFetch<{ campaign: any; message: string }>(`/admin/campaigns`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  adminCampaignUpdate: (id: string, payload: Record<string, any>) =>
+    apiFetch<{ campaign: any; message: string }>(
+      `/admin/campaigns/${encodeURIComponent(id)}`,
+      { method: "PATCH", body: JSON.stringify(payload) },
+    ),
+  adminCampaignDelete: (id: string) =>
+    apiFetch<{ deleted: boolean; id: string; message: string }>(
+      `/admin/campaigns/${encodeURIComponent(id)}`,
+      { method: "DELETE" },
+    ),
+
+  // ===== Admin CMS Blog =====
+  adminBlogPosts: () =>
+    apiFetch<{
+      items: Array<{
+        id: string;
+        title: string;
+        slug: string;
+        excerpt: string | null;
+        content: string;
+        tags: string[];
+        coverImage: string | null;
+        status: string;
+        authorName: string | null;
+        publishedAt: string | null;
+        createdAt: string;
+        updatedAt: string;
+      }>;
+    }>(`/admin/cms/blog`),
+  adminBlogCreate: (payload: {
+    title: string;
+    content?: string;
+    excerpt?: string;
+    tags?: string[];
+    coverImage?: string;
+    status?: "draft" | "published";
+    authorName?: string;
+  }) =>
+    apiFetch<{ post: any; message: string }>(`/admin/cms/blog`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  adminBlogUpdate: (id: string, payload: Record<string, any>) =>
+    apiFetch<{ post: any; message: string }>(
+      `/admin/cms/blog/${encodeURIComponent(id)}`,
+      { method: "PATCH", body: JSON.stringify(payload) },
+    ),
+  adminBlogDelete: (id: string) =>
+    apiFetch<{ deleted: boolean; id: string; message: string }>(
+      `/admin/cms/blog/${encodeURIComponent(id)}`,
+      { method: "DELETE" },
+    ),
 };
 
 // ===== Utilities =====

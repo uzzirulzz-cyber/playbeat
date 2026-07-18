@@ -7,7 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import {
   BookOpen,
   Plus,
@@ -20,14 +29,21 @@ import {
   LogIn,
   UserPlus,
   Users,
+  Trash2,
+  Image as ImageIcon,
+  Upload,
+  Video,
+  Music,
+  ExternalLink,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
-  published: "bg-green-100 text-green-700",
-  draft: "bg-yellow-100 text-yellow-700",
-  scheduled: "bg-blue-100 text-blue-700",
+  published: "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400",
+  draft: "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-400",
+  scheduled: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400",
+  private: "bg-gray-100 text-gray-600 dark:bg-gray-500/15 dark:text-gray-300",
 };
 
 interface WpAccount {
@@ -39,39 +55,201 @@ interface WpAccount {
   wpUserId?: number;
 }
 
+interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  content: string;
+  tags: string[];
+  coverImage: string | null;
+  status: string;
+  authorName: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export function AdminWordPress() {
-  const [search, setSearch] = React.useState("");
   const qc = useQueryClient();
 
-  const { data: wpData } = useQuery({
-    queryKey: ["wordpress-posts"],
-    queryFn: () => api.wordpressPosts(),
-    staleTime: 60_000,
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-blue-100 dark:bg-blue-950 rounded-xl">
+            <BookOpen size={20} className="text-blue-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">WordPress CMS</h1>
+            <p className="text-muted-foreground text-sm">
+              Manage posts, pages and content
+            </p>
+          </div>
+        </div>
+        <a
+          href="http://localhost:8881/wp-admin"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Button variant="outline" size="sm" className="gap-2">
+            <Globe size={14} />
+            Open WP Admin
+          </Button>
+        </a>
+      </div>
+
+      {/* WordPress Studio + WooCommerce Integration */}
+      <WordPressStudioCard />
+
+      {/* WordPress Accounts — Login + Create Account */}
+      <WordPressAccountsCard />
+
+      <Tabs defaultValue="blog" className="space-y-4">
+        <TabsList className="w-full">
+          <TabsTrigger value="blog" className="flex-1">
+            <FileText className="size-3.5 mr-1.5" />
+            Blog Posts (DB)
+          </TabsTrigger>
+          <TabsTrigger value="wp-posts" className="flex-1">
+            <Globe className="size-3.5 mr-1.5" />
+            WordPress Posts
+          </TabsTrigger>
+          <TabsTrigger value="media" className="flex-1">
+            <ImageIcon className="size-3.5 mr-1.5" />
+            Media Library
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="blog">
+          <BlogPostsTab />
+        </TabsContent>
+
+        <TabsContent value="wp-posts">
+          <WpPostsTab />
+        </TabsContent>
+
+        <TabsContent value="media">
+          <MediaLibraryTab />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+// ============== WordPress Studio Integration Card ==============
+
+function WordPressStudioCard() {
+  const { data: accountData } = useQuery({
+    queryKey: ["wordpress-account"],
+    queryFn: () => api.wordpressAccountStatus(),
+    staleTime: 30_000,
   });
 
+  const wpAvailable = accountData?.available ?? false;
+
+  return (
+    <Card className="border-blue-500/30 bg-blue-500/5">
+      <CardContent className="p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid size-12 place-items-center rounded-lg bg-blue-600 text-white">
+              <Globe size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold">WordPress + WooCommerce</h3>
+              <p className="text-sm text-muted-foreground">
+                Real WordPress with WooCommerce plugin — manage your store on the official platform
+              </p>
+              <div className="mt-1 flex flex-wrap gap-2">
+                <span className="rounded bg-green-500/15 px-2 py-0.5 text-[10px] font-medium text-green-500">
+                  WordPress 7.0.2
+                </span>
+                <span className="rounded bg-purple-500/15 px-2 py-0.5 text-[10px] font-medium text-purple-500">
+                  WooCommerce 10.9.4
+                </span>
+                <span className="rounded bg-blue-500/15 px-2 py-0.5 text-[10px] font-medium text-blue-500">
+                  {wpAvailable ? "API Connected" : "Local Mode"}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href="http://localhost:8881/wp-admin"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="default" size="sm" className="gap-2">
+                <Globe size={14} />
+                WP Admin
+              </Button>
+            </a>
+            <a
+              href="http://localhost:8881/wp-admin/admin.php?page=wc-settings"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="outline" size="sm" className="gap-2">
+                <Globe size={14} />
+                WooCommerce Settings
+              </Button>
+            </a>
+            <a
+              href="http://localhost:8881/wp-admin/post-new.php?post_type=product"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="outline" size="sm" className="gap-2">
+                <Plus size={14} />
+                Add WC Product
+              </Button>
+            </a>
+            <a
+              href="http://localhost:8881/wp-json/wc/v3/products"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="ghost" size="sm" className="gap-2">
+                <FileText size={14} />
+                REST API
+              </Button>
+            </a>
+            <a
+              href="https://woocommerce.com/my-account/my-stores/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button
+                variant="default"
+                size="sm"
+                className="gap-2 bg-purple-600 hover:bg-purple-700"
+              >
+                <Globe size={14} />
+                Connect to WC.com
+              </Button>
+            </a>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============== WordPress User Accounts Card ==============
+
+function WordPressAccountsCard() {
+  const qc = useQueryClient();
   const { data: accountData, isLoading: accountsLoading } = useQuery({
     queryKey: ["wordpress-account"],
     queryFn: () => api.wordpressAccountStatus(),
     staleTime: 30_000,
   });
 
-  const posts =
-    wpData?.items?.map((p: any) => ({
-      title: p.title?.rendered ?? "Untitled",
-      status: p.status,
-      author: "—",
-      date: new Date(p.date).toISOString().split("T")[0],
-      views: 0,
-      type: "post",
-    })) || [];
-
-  const filtered = posts.filter((p) =>
-    p.title.toLowerCase().includes(search.toLowerCase()),
-  );
-
-  const accounts = accountData?.accounts || [];
+  const accounts: WpAccount[] = (accountData?.accounts || []) as WpAccount[];
   const wpAvailable = accountData?.available ?? false;
-  const wpApiUrl = accountData?.apiUrl || "http://localhost:8881/wp-json/wp/v2";
+  const wpApiUrl =
+    accountData?.apiUrl || "http://localhost:8881/wp-json/wp/v2";
 
   const loginMutation = useMutation({
     mutationFn: (payload: { email: string; password: string }) =>
@@ -90,179 +268,172 @@ export function AdminWordPress() {
     onError: (e: Error) => toast.error(`Create failed: ${e.message}`),
   });
 
+  return (
+    <Card className="border-blue-500/30 bg-blue-500/5">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Users size={16} className="text-blue-500" />
+          WordPress User Accounts
+          <Badge
+            variant={wpAvailable ? "default" : "secondary"}
+            className="ml-1 text-[10px]"
+          >
+            {wpAvailable ? "WP API Connected" : "Local Mode"}
+          </Badge>
+        </CardTitle>
+        <p className="text-xs text-muted-foreground">
+          API: <span className="font-mono">{wpApiUrl}</span>
+        </p>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="login">
+          <TabsList className="w-full">
+            <TabsTrigger value="login" className="flex-1">
+              <LogIn className="size-3.5" /> Login
+            </TabsTrigger>
+            <TabsTrigger value="create" className="flex-1">
+              <UserPlus className="size-3.5" /> Create Account
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="login" className="mt-4">
+            <WpLoginForm
+              saving={loginMutation.isPending}
+              onSubmit={(email, password) =>
+                loginMutation.mutate({ email, password })
+              }
+            />
+          </TabsContent>
+
+          <TabsContent value="create" className="mt-4">
+            <WpCreateForm
+              saving={createMutation.isPending}
+              onSubmit={(name, email, password) =>
+                createMutation.mutate({ name, email, password })
+              }
+            />
+          </TabsContent>
+        </Tabs>
+
+        {/* Registered accounts list */}
+        <div className="mt-6">
+          <div className="mb-2 flex items-center gap-2">
+            <Users size={14} className="text-muted-foreground" />
+            <h4 className="text-sm font-semibold">
+              Registered WordPress Accounts
+            </h4>
+            <Badge variant="secondary" className="text-[10px]">
+              {accounts.length}
+            </Badge>
+          </div>
+          {accountsLoading ? (
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          ) : accounts.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+              No WordPress accounts yet. Create one above to get started.
+            </p>
+          ) : (
+            <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+              {accounts.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background/50 p-2.5"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {a.name || a.email}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {a.email}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <Badge
+                      variant={a.source === "wordpress" ? "default" : "secondary"}
+                      className="text-[10px]"
+                    >
+                      {a.source === "wordpress" ? "WP Synced" : "Local"}
+                    </Badge>
+                    <span className="text-[10px] text-muted-foreground">
+                      {new Date(a.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============== Blog Posts Tab (DB-backed CRUD) ==============
+
+function BlogPostsTab() {
+  const qc = useQueryClient();
+  const [search, setSearch] = React.useState("");
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState<BlogPost | null>(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-blog-posts"],
+    queryFn: () => api.adminBlogPosts(),
+    staleTime: 30_000,
+  });
+
+  const posts: BlogPost[] = data?.items ?? [];
+  const filtered = posts.filter((p) =>
+    p.title.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const createMutation = useMutation({
+    mutationFn: (payload: {
+      title: string;
+      content?: string;
+      excerpt?: string;
+      status?: "draft" | "published";
+    }) => api.adminBlogCreate(payload),
+    onSuccess: () => {
+      toast.success("Blog post created");
+      qc.invalidateQueries({ queryKey: ["admin-blog-posts"] });
+      setDialogOpen(false);
+    },
+    onError: (e: Error) => toast.error(`Create failed: ${e.message}`),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({
+      id,
+      patch,
+    }: {
+      id: string;
+      patch: Record<string, unknown>;
+    }) => api.adminBlogUpdate(id, patch),
+    onSuccess: () => {
+      toast.success("Blog post updated");
+      qc.invalidateQueries({ queryKey: ["admin-blog-posts"] });
+      setDialogOpen(false);
+    },
+    onError: (e: Error) => toast.error(`Update failed: ${e.message}`),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.adminBlogDelete(id),
+    onSuccess: () => {
+      toast.success("Blog post deleted");
+      qc.invalidateQueries({ queryKey: ["admin-blog-posts"] });
+    },
+    onError: (e: Error) => toast.error(`Delete failed: ${e.message}`),
+  });
+
   const publishedCount = posts.filter((p) => p.status === "published").length;
   const draftCount = posts.filter((p) => p.status === "draft").length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-blue-100 dark:bg-blue-950 rounded-xl">
-            <BookOpen size={20} className="text-blue-600" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">WordPress CMS</h1>
-            <p className="text-muted-foreground text-sm">
-              Manage posts, pages and content
-            </p>
-          </div>
-        </div>
-        <Button
-          onClick={() => toast.info("Opening WordPress editor...")}
-          className="gap-2"
-        >
-          <Plus size={16} />
-          New Post
-        </Button>
-      </div>
-
-      {/* WordPress Studio + WooCommerce Integration */}
-      <Card className="border-blue-500/30 bg-blue-500/5">
-        <CardContent className="p-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="grid size-12 place-items-center rounded-lg bg-blue-600 text-white">
-                <Globe size={24} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold">WordPress + WooCommerce</h3>
-                <p className="text-sm text-muted-foreground">
-                  Real WordPress with WooCommerce plugin — manage your store on the official platform
-                </p>
-                <div className="mt-1 flex flex-wrap gap-2">
-                  <span className="rounded bg-green-500/15 px-2 py-0.5 text-[10px] font-medium text-green-500">WordPress 7.0.2</span>
-                  <span className="rounded bg-purple-500/15 px-2 py-0.5 text-[10px] font-medium text-purple-500">WooCommerce 10.9.4</span>
-                  <span className="rounded bg-blue-500/15 px-2 py-0.5 text-[10px] font-medium text-blue-500">
-                    {wpAvailable ? "API Connected" : "Local Mode"}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <a href="http://localhost:8881/wp-admin" target="_blank" rel="noopener noreferrer">
-                <Button variant="default" size="sm" className="gap-2">
-                  <Globe size={14} />
-                  WP Admin
-                </Button>
-              </a>
-              <a href="http://localhost:8881/wp-admin/admin.php?page=wc-settings" target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Globe size={14} />
-                  WooCommerce Settings
-                </Button>
-              </a>
-              <a href="http://localhost:8881/wp-admin/post-new.php?post_type=product" target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Plus size={14} />
-                  Add WC Product
-                </Button>
-              </a>
-              <a href="http://localhost:8881/wp-json/wc/v3/products" target="_blank" rel="noopener noreferrer">
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <FileText size={14} />
-                  REST API
-                </Button>
-              </a>
-              <a href="https://woocommerce.com/my-account/my-stores/" target="_blank" rel="noopener noreferrer">
-                <Button variant="default" size="sm" className="gap-2 bg-purple-600 hover:bg-purple-700">
-                  <Globe size={14} />
-                  Connect to WC.com
-                </Button>
-              </a>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* WordPress Accounts — Login + Create Account */}
-      <Card className="border-blue-500/30 bg-blue-500/5">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Users size={16} className="text-blue-500" />
-            WordPress User Accounts
-            <Badge variant={wpAvailable ? "default" : "secondary"} className="ml-1 text-[10px]">
-              {wpAvailable ? "WP API Connected" : "Local Mode"}
-            </Badge>
-          </CardTitle>
-          <p className="text-xs text-muted-foreground">
-            API: <span className="font-mono">{wpApiUrl}</span>
-          </p>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="login">
-            <TabsList className="w-full">
-              <TabsTrigger value="login" className="flex-1">
-                <LogIn className="size-3.5" /> Login
-              </TabsTrigger>
-              <TabsTrigger value="create" className="flex-1">
-                <UserPlus className="size-3.5" /> Create Account
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="login" className="mt-4">
-              <WpLoginForm
-                saving={loginMutation.isPending}
-                onSubmit={(email, password) => loginMutation.mutate({ email, password })}
-              />
-            </TabsContent>
-
-            <TabsContent value="create" className="mt-4">
-              <WpCreateForm
-                saving={createMutation.isPending}
-                onSubmit={(name, email, password) =>
-                  createMutation.mutate({ name, email, password })
-                }
-              />
-            </TabsContent>
-          </Tabs>
-
-          {/* Registered accounts list */}
-          <div className="mt-6">
-            <div className="mb-2 flex items-center gap-2">
-              <Users size={14} className="text-muted-foreground" />
-              <h4 className="text-sm font-semibold">Registered WordPress Accounts</h4>
-              <Badge variant="secondary" className="text-[10px]">
-                {accounts.length}
-              </Badge>
-            </div>
-            {accountsLoading ? (
-              <p className="text-sm text-muted-foreground">Loading...</p>
-            ) : accounts.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-                No WordPress accounts yet. Create one above to get started.
-              </p>
-            ) : (
-              <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
-                {accounts.map((a) => (
-                  <div
-                    key={a.id}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background/50 p-2.5"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{a.name || a.email}</p>
-                      <p className="truncate text-xs text-muted-foreground">{a.email}</p>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      <Badge
-                        variant={a.source === "wordpress" ? "default" : "secondary"}
-                        className="text-[10px]"
-                      >
-                        {a.source === "wordpress" ? "WP Synced" : "Local"}
-                      </Badge>
-                      <span className="text-[10px] text-muted-foreground">
-                        {new Date(a.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Stats — all from real API */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="space-y-4">
+      {/* Stats — real numbers */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <FileText size={16} className="text-blue-500" />
@@ -290,12 +461,370 @@ export function AdminWordPress() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-48 max-w-md">
+          <Search
+            size={15}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            placeholder="Search blog posts..."
+            className="pl-9"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <Button
+          onClick={() => {
+            setEditing(null);
+            setDialogOpen(true);
+          }}
+          className="gap-2"
+        >
+          <Plus size={16} />
+          Create Post
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <Card>
+          <CardContent className="py-10 flex items-center justify-center text-sm text-muted-foreground">
+            <Loader2 className="size-4 mr-2 animate-spin" /> Loading blog posts…
+          </CardContent>
+        </Card>
+      ) : filtered.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <FileText size={40} className="mx-auto mb-3 text-muted-foreground" />
+            <p className="font-medium mb-1">No blog posts yet</p>
+            <p className="text-sm text-muted-foreground mb-4">
+              Create your first post to publish on the storefront blog.
+            </p>
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setDialogOpen(true);
+              }}
+              className="gap-2"
+            >
+              <Plus size={14} /> Create Post
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border bg-card">
+          <table className="w-full text-sm">
+            <thead className="border-b bg-muted/40">
+              <tr>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                  Title
+                </th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">
+                  Slug
+                </th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
+                  Author
+                </th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden sm:table-cell">
+                  Date
+                </th>
+                <th className="text-center px-4 py-3 font-medium text-muted-foreground">
+                  Status
+                </th>
+                <th className="text-right px-4 py-3 font-medium text-muted-foreground">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((p) => (
+                <tr
+                  key={p.id}
+                  className="border-b last:border-0 hover:bg-muted/30"
+                >
+                  <td className="px-4 py-3 font-medium">
+                    <div className="flex flex-col">
+                      <span>{p.title}</span>
+                      {p.excerpt && (
+                        <span className="text-xs text-muted-foreground line-clamp-1 max-w-md">
+                          {p.excerpt}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 hidden md:table-cell text-muted-foreground font-mono text-xs">
+                    /{p.slug}
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground">
+                    {p.authorName || "—"}
+                  </td>
+                  <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">
+                    {p.publishedAt
+                      ? new Date(p.publishedAt).toLocaleDateString()
+                      : new Date(p.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${statusColors[p.status] ?? ""}`}
+                    >
+                      {p.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <a
+                        href={`/blog/${p.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="View"
+                      >
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <Eye size={13} />
+                        </Button>
+                      </a>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title="Edit"
+                        onClick={() => {
+                          setEditing(p);
+                          setDialogOpen(true);
+                        }}
+                      >
+                        <Edit size={13} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-red-500 hover:text-red-600"
+                        title="Delete"
+                        disabled={deleteMutation.isPending}
+                        onClick={() => {
+                          if (
+                            !confirm(
+                              `Delete post "${p.title}"? This cannot be undone.`,
+                            )
+                          )
+                            return;
+                          deleteMutation.mutate(p.id);
+                        }}
+                      >
+                        <Trash2 size={13} />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <BlogPostDialog
+        open={dialogOpen}
+        onOpenChange={(o) => {
+          setDialogOpen(o);
+          if (!o) setEditing(null);
+        }}
+        editing={editing}
+        saving={createMutation.isPending || updateMutation.isPending}
+        onSubmit={(values) => {
+          if (editing) {
+            updateMutation.mutate({ id: editing.id, patch: values });
+          } else {
+            createMutation.mutate(values);
+          }
+        }}
+      />
+    </div>
+  );
+}
+
+function BlogPostDialog({
+  open,
+  onOpenChange,
+  editing,
+  saving,
+  onSubmit,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  editing: BlogPost | null;
+  saving: boolean;
+  onSubmit: (values: {
+    title: string;
+    content: string;
+    excerpt: string;
+    status: "draft" | "published";
+  }) => void;
+}) {
+  const [title, setTitle] = React.useState("");
+  const [content, setContent] = React.useState("");
+  const [excerpt, setExcerpt] = React.useState("");
+  const [status, setStatus] = React.useState<"draft" | "published">("draft");
+
+  React.useEffect(() => {
+    if (open) {
+      setTitle(editing?.title ?? "");
+      setContent(editing?.content ?? "");
+      setExcerpt(editing?.excerpt ?? "");
+      setStatus(
+        editing?.status === "published" ? "published" : "draft",
+      );
+    }
+  }, [open, editing]);
+
+  const valid = title.trim().length > 0;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            {editing ? "Edit Blog Post" : "Create Blog Post"}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="bp-title" className="text-xs">
+              Title
+            </Label>
+            <Input
+              id="bp-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Post title…"
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bp-excerpt" className="text-xs">
+              Excerpt (optional)
+            </Label>
+            <Input
+              id="bp-excerpt"
+              value={excerpt}
+              onChange={(e) => setExcerpt(e.target.value)}
+              placeholder="Short summary…"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bp-content" className="text-xs">
+              Content
+            </Label>
+            <Textarea
+              id="bp-content"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              rows={8}
+              placeholder="Write your post content here…"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Status</Label>
+            <div className="flex gap-2">
+              {(["draft", "published"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setStatus(s)}
+                  className={`rounded-lg border px-4 py-2 text-xs font-medium capitalize transition-colors ${
+                    status === s
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-background hover:bg-muted/50 text-muted-foreground"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Cancel</Button>
+          </DialogClose>
+          <Button
+            disabled={!valid || saving}
+            onClick={() =>
+              onSubmit({
+                title: title.trim(),
+                content,
+                excerpt,
+                status,
+              })
+            }
+          >
+            {saving ? (
+              <Loader2 className="size-4 mr-2 animate-spin" />
+            ) : (
+              <Plus className="size-4 mr-2" />
+            )}
+            {editing ? "Save Changes" : "Create Post"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ============== WordPress Posts Tab (remote WP REST API) ==============
+
+function WpPostsTab() {
+  const [search, setSearch] = React.useState("");
+
+  const { data: wpData, isLoading } = useQuery({
+    queryKey: ["wordpress-posts"],
+    queryFn: () => api.wordpressPosts(),
+    staleTime: 60_000,
+  });
+
+  const posts =
+    wpData?.items?.map((p: any) => ({
+      title: p.title?.rendered ?? "Untitled",
+      status: p.status,
+      date: new Date(p.date).toISOString().split("T")[0],
+      link: p.link,
+      excerpt: p.excerpt?.rendered ?? "",
+    })) || [];
+
+  const filtered = posts.filter((p) =>
+    p.title.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const publishedCount = posts.filter((p) => p.status === "published").length;
+  const draftCount = posts.filter((p) => p.status === "draft").length;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <Users size={16} className="text-purple-500" />
+            <FileText size={16} className="text-blue-500" />
             <div>
-              <p className="text-xs text-muted-foreground">WP Users</p>
-              <p className="font-bold">{accounts.length}</p>
+              <p className="text-xs text-muted-foreground">Total Posts</p>
+              <p className="font-bold">{posts.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <Globe size={16} className="text-green-500" />
+            <div>
+              <p className="text-xs text-muted-foreground">Published</p>
+              <p className="font-bold">{publishedCount}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <FileText size={16} className="text-yellow-500" />
+            <div>
+              <p className="text-xs text-muted-foreground">Drafts</p>
+              <p className="font-bold">{draftCount}</p>
             </div>
           </CardContent>
         </Card>
@@ -307,21 +836,47 @@ export function AdminWordPress() {
           className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
         />
         <Input
-          placeholder="Search posts and pages..."
+          placeholder="Search WordPress posts..."
           className="pl-9"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
-      {posts.length === 0 ? (
+      {isLoading ? (
         <Card>
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            {wpData?.configured
-              ? wpData?.error
-                ? `WordPress API error: ${wpData.error}`
-                : "No posts returned from WordPress."
-              : "WordPress API is not configured. Set WORDPRESS_API_URL in .env to fetch real posts."}
+          <CardContent className="py-10 flex items-center justify-center text-sm text-muted-foreground">
+            <Loader2 className="size-4 mr-2 animate-spin" /> Loading posts…
+          </CardContent>
+        </Card>
+      ) : posts.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">
+            {wpData?.configured ? (
+              wpData?.error ? (
+                `WordPress API error: ${wpData.error}`
+              ) : (
+                "No posts returned from WordPress."
+              )
+            ) : (
+              <div className="space-y-2">
+                <Globe
+                  size={32}
+                  className="mx-auto text-muted-foreground/60"
+                />
+                <p className="font-medium text-foreground">
+                  WordPress API is not configured
+                </p>
+                <p className="text-xs">
+                  Set <code className="font-mono">WORDPRESS_API_URL</code> in your
+                  <code className="font-mono"> .env</code> file to fetch real posts from your WordPress instance.
+                </p>
+                <p className="text-xs text-muted-foreground/80 pt-2">
+                  Meanwhile, use the <strong>Blog Posts (DB)</strong> tab to
+                  create and publish posts that appear on your storefront blog.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -329,12 +884,18 @@ export function AdminWordPress() {
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/40">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Title</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Type</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">Author</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground hidden sm:table-cell">Views</th>
-                <th className="text-center px-4 py-3 font-medium text-muted-foreground">Status</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Actions</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                  Title
+                </th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">
+                  Date
+                </th>
+                <th className="text-center px-4 py-3 font-medium text-muted-foreground">
+                  Status
+                </th>
+                <th className="text-right px-4 py-3 font-medium text-muted-foreground">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -344,9 +905,9 @@ export function AdminWordPress() {
                   className="border-b last:border-0 hover:bg-muted/30"
                 >
                   <td className="px-4 py-3 font-medium">{p.title}</td>
-                  <td className="px-4 py-3 capitalize text-muted-foreground hidden md:table-cell">{p.type}</td>
-                  <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{p.author}</td>
-                  <td className="px-4 py-3 text-right hidden sm:table-cell">{p.views.toLocaleString()}</td>
+                  <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">
+                    {p.date}
+                  </td>
                   <td className="px-4 py-3 text-center">
                     <span
                       className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${statusColors[p.status] ?? ""}`}
@@ -355,24 +916,21 @@ export function AdminWordPress() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => toast.info("Opening preview...")}
+                    {p.link && (
+                      <a
+                        href={p.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
                       >
-                        <Eye size={13} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => toast.info("Opening editor...")}
-                      >
-                        <Edit size={13} />
-                      </Button>
-                    </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 gap-1 text-xs"
+                        >
+                          View <ExternalLink size={11} />
+                        </Button>
+                      </a>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -383,6 +941,203 @@ export function AdminWordPress() {
     </div>
   );
 }
+
+// ============== Media Library Tab ==============
+
+function MediaLibraryTab() {
+  const qc = useQueryClient();
+  const [showUpload, setShowUpload] = React.useState(false);
+  const [form, setForm] = React.useState({
+    name: "",
+    url: "",
+    type: "image" as string,
+    size: "",
+  });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["wordpress-media-library"],
+    queryFn: () => api.adminMediaList(),
+    staleTime: 30_000,
+  });
+
+  const media: any[] = data?.items ?? [];
+
+  const handleAdd = async () => {
+    if (!form.name || !form.url) {
+      toast.error("Name and URL required");
+      return;
+    }
+    try {
+      await api.adminMediaAdd({
+        name: form.name,
+        url: form.url,
+        type: form.type,
+        size: Number(form.size) || 0,
+      });
+      toast.success("Media added");
+      setShowUpload(false);
+      setForm({ name: "", url: "", type: "image", size: "" });
+      qc.invalidateQueries({ queryKey: ["wordpress-media-library"] });
+    } catch {
+      toast.error("Failed to add media");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this media file?")) return;
+    try {
+      await api.adminMediaDelete(id);
+      toast.success("Media deleted");
+      qc.invalidateQueries({ queryKey: ["wordpress-media-library"] });
+    } catch {
+      toast.error("Failed to delete media");
+    }
+  };
+
+  const typeIcons: Record<string, React.ReactNode> = {
+    image: <ImageIcon size={16} className="text-blue-500" />,
+    video: <Video size={16} className="text-purple-500" />,
+    document: <FileText size={16} className="text-orange-500" />,
+    audio: <Music size={16} className="text-green-500" />,
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <p className="text-sm text-muted-foreground">
+          Upload and manage media files for your blog and store.
+        </p>
+        <Button onClick={() => setShowUpload(true)} className="gap-2">
+          <Upload size={16} />
+          Upload Media
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <Card>
+          <CardContent className="py-10 flex items-center justify-center text-sm text-muted-foreground">
+            <Loader2 className="size-4 mr-2 animate-spin" /> Loading media…
+          </CardContent>
+        </Card>
+      ) : media.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <ImageIcon
+              size={40}
+              className="mx-auto mb-3 text-muted-foreground"
+            />
+            <p className="font-medium mb-1">No media files yet</p>
+            <p className="text-sm text-muted-foreground mb-4">
+              Upload your first image, video, or document.
+            </p>
+            <Button onClick={() => setShowUpload(true)} className="gap-2">
+              <Upload size={14} /> Upload Media
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          {media.map((m) => (
+            <div
+              key={m.id ?? m._id}
+              className="group relative rounded-lg border bg-muted overflow-hidden aspect-square"
+            >
+              {m.type === "image" ? (
+                <img
+                  src={m.url}
+                  alt={m.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-2">
+                  {typeIcons[m.type] || <FileText size={16} />}
+                  <p className="text-xs text-muted-foreground text-center line-clamp-2 break-all">
+                    {m.name}
+                  </p>
+                </div>
+              )}
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="h-7 w-7"
+                  onClick={() => handleDelete(m.id ?? m._id)}
+                >
+                  <Trash2 size={12} />
+                </Button>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <p className="text-white text-xs truncate">{m.name}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={showUpload} onOpenChange={setShowUpload}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload Media</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">Name *</Label>
+              <Input
+                value={form.name}
+                onChange={(e) =>
+                  setForm({ ...form, name: e.target.value })
+                }
+                placeholder="file-name.jpg"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">URL *</Label>
+              <Input
+                value={form.url}
+                onChange={(e) => setForm({ ...form, url: e.target.value })}
+                placeholder="https://..."
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Type</Label>
+              <select
+                value={form.type}
+                onChange={(e) => setForm({ ...form, type: e.target.value })}
+                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="image">Image</option>
+                <option value="video">Video</option>
+                <option value="document">Document</option>
+                <option value="audio">Audio</option>
+              </select>
+            </div>
+            <div>
+              <Label className="text-xs">Size (bytes)</Label>
+              <Input
+                type="number"
+                value={form.size}
+                onChange={(e) => setForm({ ...form, size: e.target.value })}
+                placeholder="0"
+              />
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Tip: in production this would be a file upload widget. For now,
+              provide a URL where the file is hosted.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setShowUpload(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAdd}>Add</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ============== WordPress Login / Create Account forms ==============
 
 function WpLoginForm({
   saving,
@@ -397,7 +1152,9 @@ function WpLoginForm({
   return (
     <div className="space-y-3">
       <div>
-        <Label htmlFor="wp-email" className="text-xs">Email</Label>
+        <Label htmlFor="wp-email" className="text-xs">
+          Email
+        </Label>
         <Input
           id="wp-email"
           type="email"
@@ -407,7 +1164,9 @@ function WpLoginForm({
         />
       </div>
       <div>
-        <Label htmlFor="wp-password" className="text-xs">Password</Label>
+        <Label htmlFor="wp-password" className="text-xs">
+          Password
+        </Label>
         <Input
           id="wp-password"
           type="password"
@@ -421,7 +1180,11 @@ function WpLoginForm({
         disabled={saving || !email.trim() || !password}
         onClick={() => onSubmit(email.trim(), password)}
       >
-        {saving ? <Loader2 className="size-4 animate-spin" /> : <LogIn className="size-4" />}
+        {saving ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <LogIn className="size-4" />
+        )}
         Login
       </Button>
     </div>
@@ -444,7 +1207,9 @@ function WpCreateForm({
   return (
     <div className="space-y-3">
       <div>
-        <Label htmlFor="wp-name" className="text-xs">Full Name</Label>
+        <Label htmlFor="wp-name" className="text-xs">
+          Full Name
+        </Label>
         <Input
           id="wp-name"
           value={name}
@@ -453,7 +1218,9 @@ function WpCreateForm({
         />
       </div>
       <div>
-        <Label htmlFor="wp-cemail" className="text-xs">Email</Label>
+        <Label htmlFor="wp-cemail" className="text-xs">
+          Email
+        </Label>
         <Input
           id="wp-cemail"
           type="email"
@@ -463,7 +1230,9 @@ function WpCreateForm({
         />
       </div>
       <div>
-        <Label htmlFor="wp-cpassword" className="text-xs">Password</Label>
+        <Label htmlFor="wp-cpassword" className="text-xs">
+          Password
+        </Label>
         <Input
           id="wp-cpassword"
           type="password"
@@ -472,7 +1241,9 @@ function WpCreateForm({
           placeholder="At least 6 characters"
         />
         {tooShort && (
-          <p className="mt-1 text-[10px] text-red-400">Password must be at least 6 characters.</p>
+          <p className="mt-1 text-[10px] text-red-400">
+            Password must be at least 6 characters.
+          </p>
         )}
       </div>
       <Button
@@ -480,7 +1251,11 @@ function WpCreateForm({
         disabled={saving || !name.trim() || !email.trim() || password.length < 6}
         onClick={() => onSubmit(name.trim(), email.trim(), password)}
       >
-        {saving ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
+        {saving ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <UserPlus className="size-4" />
+        )}
         Create Account
       </Button>
     </div>
