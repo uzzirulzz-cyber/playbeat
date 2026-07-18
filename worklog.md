@@ -1641,3 +1641,68 @@ Added `support@playbeat.digital` and `director@playbeat.digital` alongside the e
 - The role-label convention `(General) / (Support) / (Director)` is applied as a visible text suffix in `footer.tsx`, as a parenthetical in `legal-page.tsx` / `privacy/page.tsx`, as a `<strong>` label prefix in `refund-policy/page.tsx`, and as a card label in `premium-landing.tsx`. Each format was chosen to fit the surrounding UI naturally — easy to unify further if a single canonical display format is later desired.
 - The footer's bottom-bar icon button (the `Send` icon next to the social icons) still points to `mailto:info@playbeat.digital`. Left as-is because it's a single icon button with no visible label; if a "contact" dropdown is desired, that's a separate UX change.
 - `src/components/playbeat/admin/settings.tsx` already had `support@playbeat.digital` as a default value for some admin email setting — pre-existing, untouched. If the admin settings panel needs a `directorEmail` field added too, that's a separate task (out of scope for "across all contact sections" — admin console isn't customer-facing).
+
+---
+
+## Task: fix-social-woocommerce-accounts — Social Media functional module + WooCommerce/WordPress account sections
+
+### Summary
+Made the Social Media admin module fully functional (login/create-account per platform, post composer, recent posts list — all backed by real API), created the missing `/api/v1/woocommerce/account` (GET/POST) and `/api/v1/woocommerce/account/login` (POST) routes that were causing 404s, added a new `WooCommerceAccount` component (Login + Create Account tabs + customer list) wired into the WooCommerce admin module, and added the same Login/Create Account pattern to the WordPress admin module via new `/api/v1/wordpress/account` and `/api/v1/wordpress/account/login` routes. All data flows through real APIs/DB (Settings table) — no dummy data remains.
+
+### Files created (5 new API routes + 1 new component)
+
+1. **`src/app/api/v1/admin/social-media/posts/route.ts`** — NEW. GET returns the stored `social_posts` list (JSON in Settings table); POST appends a new draft/published post `{ id, content, platforms[], status, link, createdAt }` to the list and persists; DELETE removes a post by `id`. Uses `ok()/error()` from `@/lib/api`, `db` from `@/lib/db`, `applyRateLimit` (60/20/20), `export const dynamic = "force-dynamic"`.
+
+2. **`src/app/api/v1/woocommerce/account/route.ts`** — NEW (was missing, caused 404). GET returns `{ available, storeUrl, customers[] }` — `available` is `isWooCommerceConfigured()` and `storeUrl` from `WOOCOMMERCE_STORE_URL`. Customers are loaded from Settings key `woocommerce_customers` (password hashes stripped from response). POST creates a customer: validates email + password (≥6 chars), de-dupes by email, optionally pushes to `POST {WC_STORE_URL}/wp-json/wc/v3/customers` (with consumer key/secret query params) if WC is configured, always stores locally with `hashPassword()` from `@/lib/auth`. Returns the safe customer + a context-aware message ("synced to WooCommerce" / "saved locally (error)" / "created").
+
+3. **`src/app/api/v1/woocommerce/account/login/route.ts`** — NEW. POST validates `{ email, password }` against stored `woocommerce_customers` using `verifyPassword()` from `@/lib/auth`. Returns 401 with generic "Invalid email or password" on miss, otherwise the safe customer + success message.
+
+4. **`src/app/api/v1/wordpress/account/route.ts`** — NEW. GET returns `{ available, apiUrl, accounts[] }` — `available` is `Boolean(WORDPRESS_API_URL)`, `apiUrl` falls back to `http://localhost:8881/wp-json/wp/v2` for display. Accounts loaded from Settings key `wordpress_accounts` (password hashes stripped). POST creates a WP user: validates name + email + password (≥6 chars), de-dupes, optionally calls `POST {WORDPRESS_API_URL}/users` with Basic auth (`WORDPRESS_USERNAME:WORDPRESS_APP_PASSWORD`) and `roles: ["subscriber"]` if configured, always stores locally.
+
+5. **`src/app/api/v1/wordpress/account/login/route.ts`** — NEW. POST validates `{ email, password }` against `wordpress_accounts` via `verifyPassword()`. Same shape as the WC login route.
+
+6. **`src/components/playbeat/admin/woocommerce-account.tsx`** — NEW. Self-contained `<WooCommerceAccount />` component. Uses TanStack Query (`woocommerceAccountStatus`) for the customer list + availability badge. Two tabs:
+   - **Login**: email + password → `api.woocommerceAccountLogin()` → sonner toast on success/error.
+   - **Create Account**: firstName, lastName, email, password, confirm password — inline validation for password length <6 and mismatched confirm → `api.woocommerceAccountCreate()` → invalidates the customer list query.
+   - Below the tabs: scrollable "Registered Customers" list (max-h-64) showing name/email, source badge ("WC Synced" vs "Local"), and created date. Empty state shown when no customers.
+
+### Files modified (4)
+
+7. **`src/components/playbeat/admin/social-media.tsx`** — REWROTE. Removed the old "Add Account" / "Quick Add Platform" / "Edit" dialog flow entirely (it was the "dummy" UI). New structure:
+   - Stats row (4 cards: Total Accounts / Connected / Total Followers / Auto-Posting) — all from real API data.
+   - **Post to Social composer** card: Textarea for content (with live char count), optional link Input, 6-platform Checkbox grid, two buttons: "Save Draft" (status=draft) and "Publish Now" (status=published). Uses `api.socialPostCreate()`. Resets state on success.
+   - **6 platform cards** (Facebook, Instagram, TikTok, Twitter, YouTube, LinkedIn) — always rendered, not just when an account exists. Each card has:
+     - If account exists AND has email+password: shows "Signed in as {email}" + Connected toggle + Auto-post toggle (both persist via existing PUT `/api/v1/admin/social-media` endpoint — verified working) + Logout button (clears email/password, sets connected=false) + Delete button + Visit link if URL set.
+     - Otherwise: a Tabs component with **Login** tab (email/password → upserts account record with credentials, sets connected=true) and **Create Account** tab (display name/email/password → upserts account with name+credentials, connected=true).
+   - **Recent Posts** card: lists posts from `api.socialPostsList()` — shows content, optional link, status badge, timestamp, and platform icons. Each post has a delete button (`api.socialPostDelete()`). Empty state when no posts.
+   - The existing `/api/v1/admin/social-media` GET/PUT was already correct and persisted toggles — confirmed working, no API changes needed there. The `SocialAccount` interface gained optional `email`/`password` fields for the new login/create-account flow.
+   - All toasts via sonner; all loading states via `Loader2` spinner.
+
+8. **`src/components/playbeat/admin/woocommerce.tsx`** — Added `import { WooCommerceAccount } from "./woocommerce-account";` and rendered `<WooCommerceAccount />` immediately after the header, before the "Connection + Store Summary" grid. The rest of the module (sync, products, orders) is unchanged.
+
+9. **`src/components/playbeat/admin/wordpress.tsx`** — REWROTE. Removed the hardcoded `localPosts` array (was dummy data — violated the "no dummy data" constraint). Now:
+   - Posts come only from `api.wordpressPosts()` (real WP REST API). If `wpData?.configured` is false, shows a helpful empty card explaining WORDPRESS_API_URL needs to be set. If configured but errored, shows the error. If configured + empty, shows "No posts returned."
+   - Stats row now uses real numbers: Total Posts / Published / Drafts from `posts[]`, plus a new "WP Users" card from the accounts query (was previously hardcoded "84", "76", "8", "42,100").
+   - **NEW WordPress User Accounts card** (border-blue-500/30 to match the WP theme): shows WP API URL + availability badge, then a Tabs component with **Login** (email/password → `api.wordpressAccountLogin()`) and **Create Account** (name/email/password with ≥6-char validation → `api.wordpressAccountCreate()`) tabs, then a scrollable list of registered accounts with source badge ("WP Synced" vs "Local") + created date.
+   - All toasts via sonner; all loading states via `Loader2`.
+
+10. **`src/lib/api-client.ts`** — Added 9 new methods to the `api` object, immediately before the closing `};`:
+    - `socialPostsList()`, `socialPostCreate(payload)`, `socialPostDelete(id)` → `/admin/social-media/posts`
+    - `woocommerceAccountStatus()`, `woocommerceAccountCreate(payload)`, `woocommerceAccountLogin(payload)` → `/woocommerce/account` and `/woocommerce/account/login`
+    - `wordpressAccountStatus()`, `wordpressAccountCreate(payload)`, `wordpressAccountLogin(payload)` → `/wordpress/account` and `/wordpress/account/login`
+    All follow the existing `apiFetch<T>(path, options)` pattern with typed return shapes. `BASE = "/api/v1"` so the paths match the route file locations exactly.
+
+### Verification
+- `bun run lint` → exits 0, zero warnings, zero errors. (After all 10 files created/modified.)
+- `bunx tsc --noEmit` → all TS errors reported are pre-existing in unrelated files (`examples/websocket/*`, `skills/image-edit/*`, `skills/stock-analysis-skill/*`, `src/app/api/v1/admin/analytics/reset/route.ts`, `src/app/api/v1/admin/payments/submissions/[id]/route.ts`, `src/app/api/v1/admin/reset/route.ts`, `src/app/api/v1/analytics/dashboard/route.ts`, `src/app/api/v1/payments/{crypto,jazzcash,easypaisa,paypal,stripe}/*`, `src/app/wp-json/wc/v3/orders/route.ts`, `src/components/playbeat/cart-sheet.tsx`, `src/components/playbeat/product-cover.tsx`, `src/lib/payment-methods.ts`). Filtered for `social-media|woocommerce-account|woocommerce/account|wordpress/account|admin/social-media/posts` → **zero** matches, confirming none of the new/modified files have TS errors.
+- Verified each new route file declares `export const dynamic = "force-dynamic"`, uses `ok()/error()` from `@/lib/api`, and uses `db` from `@/lib/db` (for the ones touching the DB — the login routes use `db` to read Settings; the WC account POST also uses `hashPassword` from `@/lib/auth`).
+- Verified the existing social-media toggle persistence: the existing GET/PUT at `/api/v1/admin/social-media` reads/writes the `social_media` Settings row, and the rewritten component calls PUT on every toggle/credential change, so Connected + Auto-post toggles now persist (verified by code path: `handleToggle` → `saveMutation.mutate(updated)` → PUT → DB upsert).
+- Verified no `localPosts` dummy data remains in wordpress.tsx (rewritten from scratch; posts come from `api.wordpressPosts()` only).
+
+### Notes for future runs
+- The Social Media module stores email/password on each `SocialAccount` record in the `social_media` Settings JSON. This is intentional per the task spec ("Login section: email/password fields → saves credentials to the account record") and matches the existing pattern where `apiToken` was already stored there. For a production deploy, consider encrypting these at rest (the same caveat applies to the existing `apiToken` field).
+- The WooCommerce and WordPress account routes both follow a "store locally always, push to remote if configured" pattern. This means the admin customer/user list always works even when WC/WP isn't reachable, and the source badge ("WC Synced" / "WP Synced" vs "Local") makes it visible which records have a remote counterpart. If a remote push fails (network/404/auth), the error is captured in the response `message` ("Customer saved locally (WC API error: 404)") so the admin can see what happened.
+- The WC customer POST uses the WC v3 REST API (`/wp-json/wc/v3/customers`) with consumer_key/consumer_secret as query params — this is the documented admin-level auth flow and works the same way the existing `getWooCommerceProducts`/`getWooCommerceOrders` helpers do.
+- The WordPress account POST uses Basic auth with an application password (`WORDPRESS_USERNAME` + `WORDPRESS_APP_PASSWORD`) — also the documented WP REST API pattern, matching the existing `getWordPressPosts` helper.
+- The `Settings` import in `woocommerce.tsx` (line 19) is pre-existing and unused; left untouched to keep scope minimal. Lint doesn't flag it (project's eslint config doesn't enforce `no-unused-vars` for imports). Easy to remove in a cleanup pass.
+- All new API routes are admin-readable (no role guard) — same as the existing `/api/v1/admin/social-media` route, which also has no role guard. If admin auth needs to be enforced on these new routes, wrap the handlers with `getCurrentUser(request)` + `requireRole(user, ["ADMIN"])` — the pattern exists in `@/lib/auth`.

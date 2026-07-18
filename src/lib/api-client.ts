@@ -848,6 +848,85 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ status }),
     }),
+
+  // ===== Social Media Posts =====
+  socialPostsList: () =>
+    apiFetch<{ posts: any[] }>(`/admin/social-media/posts`),
+  socialPostCreate: (payload: {
+    content: string;
+    platforms?: string[];
+    status?: "draft" | "published";
+    link?: string;
+  }) =>
+    apiFetch<{ post: any; posts: any[]; message: string }>(
+      `/admin/social-media/posts`,
+      { method: "POST", body: JSON.stringify(payload) },
+    ),
+  socialPostDelete: (id: string) =>
+    apiFetch<{ posts: any[]; message: string }>(`/admin/social-media/posts`, {
+      method: "DELETE",
+      body: JSON.stringify({ id }),
+    }),
+
+  // ===== WooCommerce Accounts =====
+  woocommerceAccountStatus: () =>
+    apiFetch<{
+      available: boolean;
+      storeUrl: string;
+      customers: Array<{
+        id: string;
+        email: string;
+        firstName: string;
+        lastName: string;
+        createdAt: string;
+        source: string;
+        wcCustomerId?: number;
+      }>;
+    }>(`/woocommerce/account`),
+  woocommerceAccountCreate: (payload: {
+    email: string;
+    password: string;
+    firstName?: string;
+    lastName?: string;
+  }) =>
+    apiFetch<{ customer: any; message: string }>(`/woocommerce/account`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  woocommerceAccountLogin: (payload: { email: string; password: string }) =>
+    apiFetch<{ customer: any; message: string }>(`/woocommerce/account/login`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  // ===== WordPress Accounts =====
+  wordpressAccountStatus: () =>
+    apiFetch<{
+      available: boolean;
+      apiUrl: string;
+      accounts: Array<{
+        id: string;
+        email: string;
+        name: string;
+        createdAt: string;
+        source: string;
+        wpUserId?: number;
+      }>;
+    }>(`/wordpress/account`),
+  wordpressAccountCreate: (payload: {
+    name: string;
+    email: string;
+    password: string;
+  }) =>
+    apiFetch<{ account: any; message: string }>(`/wordpress/account`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  wordpressAccountLogin: (payload: { email: string; password: string }) =>
+    apiFetch<{ account: any; message: string }>(`/wordpress/account/login`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 };
 
 // ===== Utilities =====
