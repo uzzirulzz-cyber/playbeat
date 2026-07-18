@@ -111,6 +111,62 @@ export function AdminWordPress() {
         </Button>
       </div>
 
+      {/* WordPress Studio + WooCommerce Integration */}
+      <Card className="border-blue-500/30 bg-blue-500/5">
+        <CardContent className="p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="grid size-12 place-items-center rounded-lg bg-blue-600 text-white">
+                <Globe size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">WordPress + WooCommerce</h3>
+                <p className="text-sm text-muted-foreground">
+                  Real WordPress with WooCommerce plugin — manage your store on the official platform
+                </p>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  <span className="rounded bg-green-500/15 px-2 py-0.5 text-[10px] font-medium text-green-500">WordPress 7.0.2</span>
+                  <span className="rounded bg-purple-500/15 px-2 py-0.5 text-[10px] font-medium text-purple-500">WooCommerce 10.9.4</span>
+                  <span className="rounded bg-blue-500/15 px-2 py-0.5 text-[10px] font-medium text-blue-500">Connected</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <a href="http://localhost:8881/wp-admin" target="_blank" rel="noopener noreferrer">
+                <Button variant="default" size="sm" className="gap-2">
+                  <Globe size={14} />
+                  WP Admin
+                </Button>
+              </a>
+              <a href="http://localhost:8881/wp-admin/admin.php?page=wc-settings" target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Globe size={14} />
+                  WooCommerce Settings
+                </Button>
+              </a>
+              <a href="http://localhost:8881/wp-admin/post-new.php?post_type=product" target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Plus size={14} />
+                  Add WC Product
+                </Button>
+              </a>
+              <a href="http://localhost:8881/wp-json/wc/v3/products" target="_blank" rel="noopener noreferrer">
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <FileText size={14} />
+                  REST API
+                </Button>
+              </a>
+              <a href="https://woocommerce.com/my-account/my-stores/" target="_blank" rel="noopener noreferrer">
+                <Button variant="default" size="sm" className="gap-2 bg-purple-600 hover:bg-purple-700">
+                  <Globe size={14} />
+                  Connect to WC.com
+                </Button>
+              </a>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           {
