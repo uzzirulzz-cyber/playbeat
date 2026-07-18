@@ -47,6 +47,8 @@ export async function GET() {
       "/wc/store/v1/products": { methods: ["GET"] },
       "/wc/store/v1/cart": { methods: ["GET", "POST"] },
       "/wc/store/v1/checkout": { methods: ["GET", "POST"] },
+      "/wccom-site/v3/subscription": { methods: ["GET"] },
+      "/wccom-site/v3/authorize": { methods: ["POST"] },
     },
     authentication: {
       "application-passwords": {
