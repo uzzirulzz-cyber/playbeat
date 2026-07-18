@@ -6,5 +6,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminPanelRedirect() {
-  redirect("/admin");
+  redirect("/wp-admin");
 }
