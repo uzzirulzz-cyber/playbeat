@@ -24,6 +24,7 @@ export async function GET() {
       "wc/store/v1",
       "wc/store",
       "wc-telemetry",
+      "wccom-site/v3",
       "woocommerce/v1",
     ],
     routes: {
