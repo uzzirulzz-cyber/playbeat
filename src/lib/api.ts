@@ -230,6 +230,84 @@ export const useUpdateDevice = (caseId: string) => {
   });
 };
 
+/* ====== Device Monitoring (auto-updates every 30s) ====== */
+
+export interface DeviceMonitorState {
+  id: string;
+  name: string;
+  connectionStatus: string;
+  batteryPercent: number | null;
+  gpsLat: number | null;
+  gpsLon: number | null;
+  gpsAccuracy: number | null;
+  gpsLocationName: string | null;
+  gpsCapturedAt: string | null;
+  lastMonitoredAt: string | null;
+  monitoringEnabled: boolean;
+  monitoringIntervalSec: number;
+  encryptionBotId: string | null;
+  encryptionStatus: string | null;
+  evidenceCount: number;
+  scanCount: number;
+  acquisitionCount: number;
+  timestamp: string;
+}
+
+// Polls a single device's monitoring state every 30s
+export const useDeviceMonitor = (deviceId: string | null) =>
+  useQuery({
+    queryKey: ["device-monitor", deviceId],
+    queryFn: () => api<DeviceMonitorState>(`/api/devices/${deviceId}/monitor`),
+    enabled: !!deviceId,
+    refetchInterval: 30_000, // auto-update every 30s
+  });
+
+// Triggers a monitoring update (GPS refresh)
+export const useTriggerMonitor = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (deviceId: string) =>
+      api<DeviceMonitorState>(`/api/devices/${deviceId}/monitor`, { method: "POST" }),
+    onSuccess: (_data, deviceId) => {
+      qc.invalidateQueries({ queryKey: ["device-monitor", deviceId] });
+    },
+  });
+};
+
+/* ====== Admin Live Monitor (all devices, real-time) ====== */
+
+export interface LiveDevice extends DeviceMonitorState {
+  make: string;
+  model: string;
+  os: string;
+  evidenceBagId: string | null;
+  isLive: boolean;
+  secondsSinceLastMonitor: number;
+  case: {
+    id: string;
+    caseNumber: string;
+    title: string;
+    createdBy: { id: string; name: string; email: string; role: string };
+  };
+  addedBy: { id: string; name: string; email: string; role: string };
+  createdAt: string;
+}
+
+// Admin real-time access to ALL devices — polls every 30s
+export const useAdminLiveMonitor = (isAdmin: boolean) =>
+  useQuery({
+    queryKey: ["admin-live-monitor"],
+    queryFn: () =>
+      api<{
+        devices: LiveDevice[];
+        timestamp: string;
+        totalDevices: number;
+        liveDevices: number;
+      }>(`/api/admin/live-monitor`),
+    enabled: isAdmin,
+    refetchInterval: 30_000, // auto-update every 30s
+  });
+
 export const useDeleteDevice = (caseId: string) => {
   const qc = useQueryClient();
   return useMutation({

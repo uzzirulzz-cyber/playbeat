@@ -285,6 +285,8 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
         readStatus: pick(["read", "unread", "delivered"]),
         messageType: "SMS",
         decoded: true,
+        encrypted: true,
+        encryptionBot: "FORENSIQ-SecureBot-v2",
         language: "en",
       },
     });
@@ -323,6 +325,8 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
         birthday: `${rand(1, 12)}/${rand(1, 28)}/${rand(1970, 2000)}`,
         notes: pick(["Met at conference 2024", "Business contact", "Reference check", "Legal counsel", "Financial advisor", ""]),
         decoded: true,
+        encrypted: true,
+        encryptionBot: "FORENSIQ-SecureBot-v2",
       },
     });
   }
@@ -365,6 +369,8 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
         browser: pick(["Safari", "Chrome", "Firefox"]),
         deviceType: "Mobile",
         decoded: true,
+        encrypted: true,
+        encryptionBot: "FORENSIQ-SecureBot-v2",
       },
     });
   }
@@ -395,6 +401,8 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
         startTime: new Date(now - rand(0, 90) * day).toISOString(),
         endTime: new Date(now - rand(0, 90) * day + duration * 1000).toISOString(),
         decoded: true,
+        encrypted: true,
+        encryptionBot: "FORENSIQ-SecureBot-v2",
       },
     });
   }
@@ -446,6 +454,8 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
         locationName: loc.name,
         areaName: loc.area,
         decoded: true,
+        encrypted: true,
+        encryptionBot: "FORENSIQ-SecureBot-v2",
       },
     });
   }
@@ -496,6 +506,8 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
         priority: pick(["normal", "high"]),
         read: pick([true, false]),
         decoded: true,
+        encrypted: true,
+        encryptionBot: "FORENSIQ-SecureBot-v2",
       },
     });
   }
@@ -555,6 +567,8 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
         status: pick(["completed", "pending", "completed", "completed"]),
         location: pick(["San Francisco, CA", "New York, NY", "Online", "Los Angeles, CA"]),
         decoded: true,
+        encrypted: true,
+        encryptionBot: "FORENSIQ-SecureBot-v2",
       },
     });
   }
@@ -602,6 +616,8 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
         createdAt: new Date(now - rand(1, 100) * day).toISOString(),
         modifiedAt: new Date(now - rand(0, 30) * day).toISOString(),
         decoded: true,
+        encrypted: true,
+        encryptionBot: "FORENSIQ-SecureBot-v2",
       },
     });
   }
@@ -677,6 +693,8 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
         extractionMethod: pick(["keychain_dump", "sqlite_decrypt", "memory_carve", "plist_decode"]),
         accessibleWhenUnlocked: true,
         decoded: true,
+        encrypted: true,
+        encryptionBot: "FORENSIQ-SecureBot-v2",
         securityLevel: pick(["strong", "moderate", "weak"]),
       },
     });
@@ -736,6 +754,8 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
         networkActivity: pick(["high", "moderate", "low", "none"]),
         sandboxed: true,
         decoded: true,
+        encrypted: true,
+        encryptionBot: "FORENSIQ-SecureBot-v2",
       },
     });
   }

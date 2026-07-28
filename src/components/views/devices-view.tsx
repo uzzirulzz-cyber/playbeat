@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
@@ -61,6 +61,8 @@ import {
   useDevices,
   useUpdateDevice,
   useVerifyAcquisition,
+  useDeviceMonitor,
+  useTriggerMonitor,
 } from "@/lib/api";
 import { useAppStore } from "@/lib/store";
 import type {
@@ -1991,6 +1993,101 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
  * Main view
  * ========================================================================== */
 
+/* ============================================================
+ * Live Monitoring Bar — auto-updates every 30s
+ * Shows real-time GPS, battery, encryption bot status for all
+ * connected/monitoring devices.
+ * ============================================================ */
+
+function LiveMonitoringBar({ devices }: { devices: ApiDevice[] }) {
+  const monitoringDevices = devices.filter(
+    (d) => d.monitoringEnabled || d.connectionStatus === "monitoring" || d.connectionStatus === "connected"
+  );
+  const triggerMonitor = useTriggerMonitor();
+
+  // Auto-trigger monitor updates every 30s for the first monitoring device
+  useEffect(() => {
+    if (monitoringDevices.length === 0) return;
+    const interval = setInterval(() => {
+      // Trigger monitoring update for all monitoring devices
+      monitoringDevices.forEach((d) => {
+        triggerMonitor.mutate(d.id);
+      });
+    }, 30_000); // 30 seconds
+    return () => clearInterval(interval);
+  }, [monitoringDevices.length]);
+
+  if (monitoringDevices.length === 0) return null;
+
+  return (
+    <div className="rounded-lg border border-accent/30 bg-accent/5 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Radio className="h-4 w-4 text-accent" />
+            <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-accent pulse-ring" />
+          </div>
+          <span className="text-sm font-semibold">Live Monitoring</span>
+          <Badge variant="outline" className="text-[9px] text-accent border-accent/30 bg-accent/10">
+            AUTO-UPDATE 30s
+          </Badge>
+        </div>
+        <div className="text-[10px] font-mono-forensic text-muted-foreground">
+          {monitoringDevices.length} device{monitoringDevices.length !== 1 ? "s" : ""} ·{" "}
+          {new Date().toLocaleTimeString()}
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {monitoringDevices.map((d) => (
+          <div key={d.id} className="rounded-md border border-border/40 bg-card/60 p-2.5 space-y-1.5">
+            {/* Device name + status */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium truncate">{d.name}</span>
+              <Badge variant="outline" className="text-[8px] text-accent border-accent/30 bg-accent/10 shrink-0">
+                <span className="h-1 w-1 rounded-full bg-accent mr-1 pulse-ring" />
+                LIVE
+              </Badge>
+            </div>
+            {/* GPS Location */}
+            {d.gpsLat != null && (
+              <div className="flex items-center gap-1 text-[10px]">
+                <MapPin className="h-2.5 w-2.5 text-primary shrink-0" />
+                <span className="font-mono-forensic">
+                  {d.gpsLat.toFixed(4)}, {d.gpsLon?.toFixed(4)}
+                </span>
+                {d.gpsLocationName && (
+                  <span className="text-muted-foreground truncate">· {d.gpsLocationName}</span>
+                )}
+              </div>
+            )}
+            {/* Battery + Evidence + Encryption */}
+            <div className="flex items-center gap-2 text-[10px]">
+              <span className="flex items-center gap-0.5">
+                <BatteryIcon percent={d.batteryPercent} />
+                {d.batteryPercent ?? "—"}%
+              </span>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground">{d._count?.evidenceItems ?? 0} evidence</span>
+              <span className="text-muted-foreground">·</span>
+              <span className="flex items-center gap-0.5 text-accent">
+                <Bot className="h-2.5 w-2.5" />
+                E2E
+              </span>
+            </div>
+            {/* Last monitored */}
+            {d.lastMonitoredAt && (
+              <div className="text-[9px] text-muted-foreground font-mono-forensic">
+                Last update: {formatRelative(d.lastMonitoredAt)}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function DevicesView({ caseId }: { caseId: string }) {
   const advanceMode = useAppStore((s) => s.advanceMode);
   const { data: devices, isLoading } = useDevices(caseId);
@@ -2081,6 +2178,9 @@ export function DevicesView({ caseId }: { caseId: string }) {
             </Button>
           </div>
         </div>
+
+        {/* Live Monitoring Bar — auto-updates every 30s */}
+        <LiveMonitoringBar devices={devices ?? []} />
 
         {/* Summary stat bar */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

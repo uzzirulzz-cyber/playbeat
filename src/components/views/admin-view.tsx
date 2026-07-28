@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, useTeam, useUpdateTeamMember, useOrganization, useAdminAllData } from "@/lib/api";
+import { useSession, useTeam, useUpdateTeamMember, useOrganization, useAdminAllData, useAdminLiveMonitor } from "@/lib/api";
 import { useView } from "@/lib/view-router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,7 @@ import {
   Activity,
   Eye,
   Zap,
+  Bot,
   KeyRound as KeyIcon,
   AppWindow,
   Image as ImageIcon,
@@ -204,6 +205,9 @@ export function AdminView() {
         </CardContent>
       </Card>
 
+      {/* Live Monitor — admin real-time access to ALL devices (auto-updates 30s) */}
+      <AdminLiveMonitorSection />
+
       {/* All Data — Admin super-power oversight of all members' work */}
       <AdminAllDataSection />
 
@@ -324,6 +328,138 @@ function OrgLicenseKey() {
         {copied ? "Copied!" : "Copy license key"}
       </Button>
     </>
+  );
+}
+
+/* =================== Admin Live Monitor (real-time, 30s auto-update) =================== */
+
+function AdminLiveMonitorSection() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
+  const { data, isLoading } = useAdminLiveMonitor(isAdmin);
+  const goCase = useView((s) => s.goCase);
+
+  if (!isAdmin) return null;
+  if (isLoading || !data) {
+    return (
+      <Card className="border-border/60">
+        <CardContent className="py-8 text-center text-xs text-muted-foreground">
+          Loading live monitor…
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="border-accent/30 ring-1 ring-accent/10">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <div className="relative">
+              <Activity className="h-4 w-4 text-accent" />
+              <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-accent pulse-ring" />
+            </div>
+            Live Device Monitor — Real-Time Access
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-[9px] text-accent border-accent/30 bg-accent/10">
+              AUTO-UPDATE 30s
+            </Badge>
+            <Badge variant="outline" className="text-[9px]">
+              {data.liveDevices}/{data.totalDevices} LIVE
+            </Badge>
+          </div>
+        </div>
+        <CardDescription>
+          Real-time access to all devices across all members — GPS location, monitoring status, encryption bots, and evidence counts update every 30 seconds.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {data.devices.length === 0 ? (
+          <div className="text-center text-xs text-muted-foreground py-8">
+            No devices registered. Add a device to a case to begin monitoring.
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-[500px] overflow-y-auto">
+            {data.devices.map((d) => (
+              <div
+                key={d.id}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-md border transition-colors cursor-pointer",
+                  d.isLive
+                    ? "border-accent/30 bg-accent/5 hover:bg-accent/10"
+                    : "border-border/40 bg-muted/20 hover:bg-muted/30"
+                )}
+                onClick={() => goCase(d.case.id, "devices")}
+              >
+                {/* Live indicator */}
+                <div className={cn(
+                  "h-2 w-2 rounded-full shrink-0",
+                  d.isLive ? "bg-accent pulse-ring" : "bg-muted-foreground"
+                )} />
+
+                {/* Device info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium truncate">{d.name}</span>
+                    <Badge variant="outline" className="text-[8px] capitalize">{d.connectionStatus}</Badge>
+                    {d.encryptionStatus === "active" && (
+                      <Badge variant="outline" className="text-[8px] text-accent border-accent/30 bg-accent/10 shrink-0">
+                        <Bot className="h-2 w-2 mr-0.5" />
+                        E2E
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground font-mono-forensic mt-0.5 truncate">
+                    {d.make} {d.model} · {d.case.caseNumber} · by {d.addedBy.name}
+                  </div>
+                </div>
+
+                {/* GPS */}
+                {d.gpsLat != null && (
+                  <div className="text-[10px] text-right shrink-0">
+                    <div className="font-mono-forensic text-primary">
+                      {d.gpsLat.toFixed(4)}, {d.gpsLon?.toFixed(4)}
+                    </div>
+                    <div className="text-muted-foreground truncate max-w-[120px]">{d.gpsLocationName ?? "—"}</div>
+                  </div>
+                )}
+
+                {/* Battery */}
+                <div className="text-center shrink-0 w-12">
+                  <div className={cn(
+                    "text-xs font-mono-forensic",
+                    (d.batteryPercent ?? 0) < 20 ? "text-destructive" : "text-muted-foreground"
+                  )}>
+                    {d.batteryPercent ?? "—"}%
+                  </div>
+                  <div className="text-[8px] text-muted-foreground">battery</div>
+                </div>
+
+                {/* Evidence count */}
+                <div className="text-center shrink-0 w-12">
+                  <div className="text-xs font-mono-forensic text-emerald-400">{d.evidenceCount}</div>
+                  <div className="text-[8px] text-muted-foreground">evidence</div>
+                </div>
+
+                {/* Last update */}
+                <div className="text-right shrink-0 w-20">
+                  <div className="text-[10px] font-mono-forensic text-muted-foreground">
+                    {d.secondsSinceLastMonitor < 60
+                      ? `${d.secondsSinceLastMonitor}s ago`
+                      : `${Math.floor(d.secondsSinceLastMonitor / 60)}m ago`}
+                  </div>
+                  <div className="text-[8px] text-muted-foreground">last update</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="mt-3 pt-2 border-t border-border/40 text-[10px] font-mono-forensic text-muted-foreground text-right">
+          Last refresh: {new Date(data.timestamp).toLocaleTimeString()}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
