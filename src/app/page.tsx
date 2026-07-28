@@ -1,9 +1,8 @@
 "use client";
 
 import { useSession } from "@/lib/api";
-import { ActivationFlow } from "@/components/activation-flow";
 import { AppShell } from "@/components/app-shell";
-import { StorefrontView } from "@/components/views/storefront-view";
+import { ComingSoon } from "@/components/coming-soon";
 import { DashboardView } from "@/components/views/dashboard-view";
 import { CasesView } from "@/components/views/cases-view";
 import { CaseDetailView } from "@/components/views/case-detail-view";
@@ -23,29 +22,32 @@ export default function Home() {
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
           <div className="text-xs font-mono-forensic text-muted-foreground">
-            INITIALIZING FORENSIQ ENGINE…
+            INITIALIZING…
           </div>
         </div>
       </div>
     );
   }
 
-  // Storefront is public — always accessible
+  // Default landing page = "Coming Soon" + auto-capture
+  // The storefront view is only shown if user navigates to #storefront
   if (view.name === "storefront") {
+    // If authed, show the storefront (with dashboard link)
     if (session?.user && session.organization) {
-      return <StorefrontView />;
+      return <ComingSoon />;
     }
-    return <StorefrontView />;
+    return <ComingSoon />;
   }
 
-  // Not authenticated
+  // Not authenticated — show Coming Soon (not the login)
   if (!session?.user) {
-    return <ActivationFlow />;
+    return <ComingSoon />;
   }
 
-  // Authenticated but not activated
+  // Authenticated but not activated — show Coming Soon
+  // (login/activation is at /login00001)
   if (!session.organization) {
-    return <ActivationFlow />;
+    return <ComingSoon />;
   }
 
   // Authenticated & activated — show the platform
