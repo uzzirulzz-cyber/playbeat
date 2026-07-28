@@ -1,6 +1,7 @@
 "use client";
 
-import { useSession, useTeam, useUpdateTeamMember, useOrganization } from "@/lib/api";
+import { useSession, useTeam, useUpdateTeamMember, useOrganization, useAdminAllData } from "@/lib/api";
+import { useView } from "@/lib/view-router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,23 @@ import {
   Pencil,
   Plus,
   Lock,
+  Database,
+  Briefcase,
+  HardDrive,
+  Cpu,
+  FileDown,
+  Activity,
+  Eye,
+  Zap,
+  KeyRound as KeyIcon,
+  AppWindow,
+  Image as ImageIcon,
+  AudioLines,
+  MessageSquare,
+  Phone,
+  Globe,
+  FileText,
+  MapPin,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -186,6 +204,9 @@ export function AdminView() {
         </CardContent>
       </Card>
 
+      {/* All Data — Admin super-power oversight of all members' work */}
+      <AdminAllDataSection />
+
       {/* License card */}
       <Card className="border-border/60">
         <CardHeader className="pb-3">
@@ -303,6 +324,313 @@ function OrgLicenseKey() {
         {copied ? "Copied!" : "Copy license key"}
       </Button>
     </>
+  );
+}
+
+/* =================== Admin All-Data Oversight =================== */
+/* The admin has super-power over all members — this section shows all  */
+/* cases, evidence, member activity, credentials, and decoded data.     */
+
+const CAT_ICONS: Record<string, React.ReactNode> = {
+  photos: <ImageIcon className="h-3 w-3" />,
+  videos: <FileText className="h-3 w-3" />,
+  audio: <AudioLines className="h-3 w-3" />,
+  sms: <MessageSquare className="h-3 w-3" />,
+  contacts: <Users className="h-3 w-3" />,
+  browser_history: <Globe className="h-3 w-3" />,
+  call_logs: <Phone className="h-3 w-3" />,
+  app_data: <AppWindow className="h-3 w-3" />,
+  location_data: <MapPin className="h-3 w-3" />,
+  emails: <FileText className="h-3 w-3" />,
+  documents: <FileText className="h-3 w-3" />,
+  social_media: <Globe className="h-3 w-3" />,
+  financial: <KeyIcon className="h-3 w-3" />,
+  calendar: <FileText className="h-3 w-3" />,
+  notes: <FileText className="h-3 w-3" />,
+  system_logs: <Cpu className="h-3 w-3" />,
+  network_data: <Globe className="h-3 w-3" />,
+  credentials: <KeyIcon className="h-3 w-3" />,
+  installed_apps: <AppWindow className="h-3 w-3" />,
+  other: <FileText className="h-3 w-3" />,
+};
+
+function AdminAllDataSection() {
+  const { data, isLoading } = useAdminAllData();
+  const goCase = useView((s) => s.goCase);
+  const [tab, setTab] = useState<"overview" | "cases" | "members" | "evidence" | "activity">("overview");
+
+  if (isLoading || !data) {
+    return (
+      <Card className="border-border/60">
+        <CardContent className="py-8 text-center text-xs text-muted-foreground">
+          Loading organization data…
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const t = data.totals;
+  const stats = [
+    { label: "Cases", value: t.cases, icon: <Briefcase className="h-4 w-4" />, color: "text-primary" },
+    { label: "Members", value: t.users, icon: <Users className="h-4 w-4" />, color: "text-accent" },
+    { label: "Devices", value: t.devices, icon: <HardDrive className="h-4 w-4" />, color: "text-amber-400" },
+    { label: "Scans", value: t.scans, icon: <Cpu className="h-4 w-4" />, color: "text-fuchsia-400" },
+    { label: "Evidence Items", value: t.evidence, icon: <Database className="h-4 w-4" />, color: "text-emerald-400" },
+    { label: "For Export", value: t.selectedEvidence, icon: <FileDown className="h-4 w-4" />, color: "text-blue-400" },
+    { label: "Deliveries", value: t.deliveries, icon: <FileDown className="h-4 w-4" />, color: "text-violet-400" },
+  ];
+
+  return (
+    <Card className="border-primary/30 ring-1 ring-primary/10">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Eye className="h-4 w-4 text-primary" />
+            All Data — Super Admin Oversight
+          </CardTitle>
+          <Badge variant="outline" className="text-[9px] text-primary border-primary/30 bg-primary/5">
+            <Zap className="mr-1 h-2.5 w-2.5" /> FULL ACCESS
+          </Badge>
+        </div>
+        <CardDescription>
+          Complete oversight of all organization data — every case, evidence item, member activity, and credential across all members.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Stat cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+          {stats.map((s) => (
+            <div key={s.label} className="rounded-md bg-muted/30 p-2.5 ring-1 ring-border/40">
+              <div className={cn("flex items-center justify-between mb-1", s.color)}>
+                <span className="text-[9px] font-mono-forensic uppercase tracking-wider">{s.label}</span>
+                {s.icon}
+              </div>
+              <div className="text-xl font-bold font-mono-forensic">{s.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tabs */}
+        <div className="flex items-center gap-1 border-b border-border/60 overflow-x-auto">
+          {([
+            { id: "overview", label: "Overview" },
+            { id: "cases", label: `All Cases (${data.cases.length})` },
+            { id: "members", label: `Members (${data.users.length})` },
+            { id: "evidence", label: `Recent Evidence (${data.recentEvidence.length})` },
+            { id: "activity", label: `Activity (${data.recentActivity.length})` },
+          ] as const).map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium border-b-2 -mb-px transition-colors cursor-pointer whitespace-nowrap",
+                tab === t.id
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        <div className="max-h-[500px] overflow-y-auto">
+          {tab === "overview" && (
+            <div className="space-y-3">
+              {/* All Cases summary */}
+              <div>
+                <div className="text-[10px] font-mono-forensic uppercase tracking-wider text-muted-foreground mb-2">
+                  All Cases by Member
+                </div>
+                <div className="space-y-1.5">
+                  {data.cases.slice(0, 10).map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => goCase(c.id, "evidence")}
+                      className="w-full flex items-center gap-3 p-2.5 rounded-md hover:bg-muted/40 transition-colors text-left cursor-pointer border border-border/40"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 ring-1 ring-primary/20 shrink-0">
+                        <Briefcase className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium truncate">{c.title}</span>
+                          <Badge variant="outline" className="text-[8px] capitalize">{c.status}</Badge>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground font-mono-forensic mt-0.5">
+                          {c.caseNumber} · by {c.createdBy?.name ?? "—"} · {c._count.evidenceItems} evidence · {c._count.devices} devices
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-[8px] capitalize">{c.priority}</Badge>
+                    </button>
+                  ))}
+                  {data.cases.length === 0 && (
+                    <div className="text-center text-xs text-muted-foreground py-4">No cases yet.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tab === "cases" && (
+            <div className="space-y-1.5">
+              {data.cases.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => goCase(c.id, "evidence")}
+                  className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-muted/40 transition-colors text-left cursor-pointer border border-border/40"
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 ring-1 ring-primary/20 shrink-0">
+                    <Briefcase className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium truncate">{c.title}</span>
+                      <Badge variant="outline" className="text-[8px] capitalize">{c.status}</Badge>
+                      <Badge variant="outline" className="text-[8px] capitalize">{c.priority}</Badge>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground font-mono-forensic mt-0.5">
+                      {c.caseNumber} · Created by {c.createdBy?.name ?? "—"} ({c.createdBy?.role ?? "—"})
+                      {c.assignedTo && ` · Assigned to ${c.assignedTo.name}`}
+                    </div>
+                    <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
+                      <span>{c._count.devices} devices</span>
+                      <span>·</span>
+                      <span>{c._count.scanSessions} scans</span>
+                      <span>·</span>
+                      <span className="text-primary">{c._count.evidenceItems} evidence</span>
+                      <span>·</span>
+                      <span>{c._count.deliveries} exports</span>
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground font-mono-forensic shrink-0">
+                    {formatRelative(c.updatedAt)}
+                  </div>
+                </button>
+              ))}
+              {data.cases.length === 0 && (
+                <div className="text-center text-xs text-muted-foreground py-8">No cases in the organization.</div>
+              )}
+            </div>
+          )}
+
+          {tab === "members" && (
+            <div className="space-y-1.5">
+              {data.users.map((u) => (
+                <div key={u.id} className="p-3 rounded-md border border-border/40 bg-muted/20">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback className="text-[11px] bg-primary/15 text-primary font-mono-forensic">
+                        {(u.name ?? u.email ?? "?").slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{u.name}</span>
+                        <Badge variant="outline" className={cn("text-[9px] capitalize", roleColors[u.role] ?? "")}>
+                          {u.role}
+                        </Badge>
+                        {u.role === "admin" && <Crown className="h-3 w-3 text-amber-400" />}
+                        {u.mfaEnabled && <ShieldCheck className="h-3 w-3 text-emerald-400" />}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground font-mono-forensic">{u.email}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        Active {formatRelative(u.lastActive ?? u.createdAt)} · Joined {formatDateTime(u.createdAt)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2 border-t border-border/40">
+                    <MemStat label="Cases" value={u._count.casesCreated} />
+                    <MemStat label="Devices" value={u._count.devicesAdded} />
+                    <MemStat label="Acq." value={u._count.acquisitions} />
+                    <MemStat label="Scans" value={u._count.scansInitiated} />
+                    <MemStat label="Exports" value={u._count.deliveriesCreated} />
+                    <MemStat label="Actions" value={u._count.auditLogs} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {tab === "evidence" && (
+            <div className="space-y-1">
+              {data.recentEvidence.map((e) => {
+                const decoded = e.decodedContent
+                  ? (() => {
+                      try { return JSON.parse(e.decodedContent); } catch { return null; }
+                    })()
+                  : null;
+                return (
+                  <button
+                    key={e.id}
+                    onClick={() => goCase(e.case.id, "evidence")}
+                    className="w-full flex items-center gap-3 p-2.5 rounded-md hover:bg-muted/40 transition-colors text-left cursor-pointer border border-border/40"
+                  >
+                    <div className="flex h-7 w-7 items-center justify-center rounded-md bg-muted/40 shrink-0 text-muted-foreground">
+                      {CAT_ICONS[e.category] ?? <FileText className="h-3 w-3" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium truncate font-mono-forensic">{e.fileName}</span>
+                        {decoded && (
+                          <Badge variant="outline" className="text-[8px] text-emerald-400 border-emerald-500/30 bg-emerald-500/5">
+                            DECODED
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                        {e.case.caseNumber} · {e.category.replace(/_/g, " ")}
+                        {decoded?.transcription && ` · "${decoded.transcription.slice(0, 60)}…"`}
+                        {decoded?.password && ` · pass: ${decoded.password}`}
+                        {decoded?.appName && ` · ${decoded.appName} v${decoded.version}`}
+                        {decoded?.body && ` · "${decoded.body}"`}
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-[8px] capitalize shrink-0">{e.recoveryStatus}</Badge>
+                  </button>
+                );
+              })}
+              {data.recentEvidence.length === 0 && (
+                <div className="text-center text-xs text-muted-foreground py-8">No evidence items yet.</div>
+              )}
+            </div>
+          )}
+
+          {tab === "activity" && (
+            <div className="space-y-1">
+              {data.recentActivity.map((a) => (
+                <div key={a.id} className="flex items-start gap-2.5 p-2.5 rounded-md hover:bg-muted/30 transition-colors">
+                  <div className="h-1.5 w-1.5 rounded-full bg-accent mt-1.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs">
+                      <span className="font-medium">{a.action.replace(/_/g, " ")}</span>
+                      <span className="text-muted-foreground"> · {a.resourceType}</span>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground mt-0.5">{a.details}</div>
+                    <div className="text-[10px] text-muted-foreground font-mono-forensic mt-0.5">
+                      {a.user?.name ?? "—"} ({a.user?.role ?? "—"}) · {formatRelative(a.createdAt)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {data.recentActivity.length === 0 && (
+                <div className="text-center text-xs text-muted-foreground py-8">No activity recorded.</div>
+              )}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MemStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="text-center">
+      <div className="text-sm font-bold font-mono-forensic">{value}</div>
+      <div className="text-[8px] uppercase tracking-wider text-muted-foreground">{label}</div>
+    </div>
   );
 }
 

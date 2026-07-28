@@ -294,12 +294,12 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
   }
 
   // App Data
-  const apps = ["WhatsApp", "Telegram", "Signal", "Instagram", "TikTok", "Snapchat", "Discord", "Slack", "Cash App", "Venmo"];
+  const appNames = ["WhatsApp", "Telegram", "Signal", "Instagram", "TikTok", "Snapchat", "Discord", "Slack", "Cash App", "Venmo"];
   for (let i = 0; i < 12; i++) {
     templates.push({
       category: "app_data",
-      fileName: `${pick(apps)}_db_${rand(1, 999)}.sqlite`,
-      filePath: `${devicePrefix}Containers/Data/Application/${rand(1000, 9999)}/Documents/${pick(apps)}.sqlite`,
+      fileName: `${pick(appNames)}_db_${rand(1, 999)}.sqlite`,
+      filePath: `${devicePrefix}Containers/Data/Application/${rand(1000, 9999)}/Documents/${pick(appNames)}.sqlite`,
       mimeType: "application/x-sqlite3",
       sizeBytes: rand(50_000, 8_000_000),
       recoveryStatus: pick<EvidenceTemplate["recoveryStatus"]>(["existing", "existing", "orphaned", "cached"]),
