@@ -94,15 +94,23 @@ export async function getCurrentUser() {
   return user;
 }
 
+export class AuthError extends Error {
+  status: number;
+  constructor(message: string, status: number = 401) {
+    super(message);
+    this.status = status;
+  }
+}
+
 export async function requireUser() {
   const user = await getCurrentUser();
-  if (!user) throw new Error("Not authenticated");
+  if (!user) throw new AuthError("Not authenticated", 401);
   return user;
 }
 
 export async function requireOrg() {
   const user = await requireUser();
-  if (!user.organizationId) throw new Error("No organization");
+  if (!user.organizationId) throw new AuthError("No organization", 403);
   return user;
 }
 
