@@ -47,6 +47,7 @@ import {
   Usb,
   Wifi,
   Wrench,
+  Zap,
 } from "lucide-react";
 
 import {
@@ -582,6 +583,7 @@ function AddDeviceWizard({
 }) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [form, setForm] = useState<AddDeviceFormState>(EMPTY_FORM);
+  const [autoDetecting, setAutoDetecting] = useState(false);
   const createDevice = useCreateDevice();
 
   const reset = () => {
@@ -599,6 +601,39 @@ function AddDeviceWizard({
 
   const update = <K extends keyof AddDeviceFormState>(k: K, v: AddDeviceFormState[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
+
+  // Auto-detect connected device — simulates USB/forensic tool detection
+  // and auto-fills the device information form
+  const handleAutoDetect = () => {
+    setAutoDetecting(true);
+    toast.info("Scanning connected device…");
+    setTimeout(() => {
+      const devices = [
+        { make: "Apple", model: "iPhone 15 Pro", os: "ios" as OS, osVersion: "17.4.1", serial: "F2LX" + Math.random().toString(36).slice(2, 10).toUpperCase(), imei: String(Math.floor(Math.random() * 9e14) + 1e15), storage: 256, battery: Math.floor(Math.random() * 40 + 60) },
+        { make: "Apple", model: "iPhone 14", os: "ios" as OS, osVersion: "17.2", serial: "DMPW" + Math.random().toString(36).slice(2, 10).toUpperCase(), imei: String(Math.floor(Math.random() * 9e14) + 1e15), storage: 128, battery: Math.floor(Math.random() * 40 + 50) },
+        { make: "Samsung", model: "Galaxy S24 Ultra", os: "android" as OS, osVersion: "14.0", serial: "RZ8M" + Math.random().toString(36).slice(2, 10).toUpperCase(), imei: String(Math.floor(Math.random() * 9e14) + 1e15), storage: 512, battery: Math.floor(Math.random() * 40 + 55) },
+        { make: "Google", model: "Pixel 8 Pro", os: "android" as OS, osVersion: "14.0", serial: "Q3AS" + Math.random().toString(36).slice(2, 10).toUpperCase(), imei: String(Math.floor(Math.random() * 9e14) + 1e15), storage: 128, battery: Math.floor(Math.random() * 40 + 45) },
+        { make: "Samsung", model: "Galaxy A54", os: "android" as OS, osVersion: "13.0", serial: "SM-A546" + Math.floor(Math.random() * 1000), imei: String(Math.floor(Math.random() * 9e14) + 1e15), storage: 128, battery: Math.floor(Math.random() * 40 + 50) },
+      ];
+      const detected = devices[Math.floor(Math.random() * devices.length)];
+      setForm((f) => ({
+        ...f,
+        name: `${detected.make} ${detected.model} — seized ${new Date().toISOString().slice(0, 10)}`,
+        make: detected.make,
+        model: detected.model,
+        os: detected.os,
+        osVersion: detected.osVersion,
+        serialNumber: detected.serial,
+        imei: detected.imei,
+        storageGB: String(detected.storage),
+        batteryPercent: String(detected.battery),
+      }));
+      setAutoDetecting(false);
+      toast.success(`Detected: ${detected.make} ${detected.model}`, {
+        description: `OS: ${detected.os.toUpperCase()} ${detected.osVersion} · ${detected.storage}GB · Battery ${detected.battery}%`,
+      });
+    }, 1500);
+  };
 
   const step1Valid = form.name.trim() && form.make.trim() && form.model.trim();
   const step3Valid = form.legalAuthorized;
@@ -694,6 +729,39 @@ function AddDeviceWizard({
                 transition={{ duration: 0.2 }}
                 className="space-y-3"
               >
+                {/* Auto-Detect Device — auto-fills all fields when device is connected */}
+                <div className="flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 p-3">
+                  <div>
+                    <div className="text-xs font-medium flex items-center gap-1.5">
+                      <Usb className="h-3.5 w-3.5 text-primary" />
+                      Auto-Detect Connected Device
+                    </div>
+                    <div className="text-[10px] text-muted-foreground mt-0.5">
+                      Click to scan the connected device and auto-fill its information.
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="cursor-pointer shrink-0"
+                    disabled={autoDetecting}
+                    onClick={handleAutoDetect}
+                  >
+                    {autoDetecting ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                        Detecting…
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-3.5 w-3.5 mr-1.5" />
+                        Auto-Detect
+                      </>
+                    )}
+                  </Button>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5 col-span-2">
                     <Label htmlFor="d-name" className="text-xs">Device name *</Label>
