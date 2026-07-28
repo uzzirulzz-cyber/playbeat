@@ -855,28 +855,9 @@ export async function tickScanSession(sessionId: string): Promise<TickResult> {
       },
     });
 
-    // Generate evidence
-    const templates = generateEvidenceTemplates(session.deviceId ?? undefined);
-    await db.evidenceItem.createMany({
-      data: templates.map((t) => ({
-        caseId: session.caseId,
-        scanSessionId: sessionId,
-        deviceId: session.deviceId,
-        category: t.category,
-        fileName: t.fileName,
-        filePath: t.filePath,
-        mimeType: t.mimeType,
-        sizeBytes: t.sizeBytes,
-        recoveryStatus: t.recoveryStatus,
-        confidence: t.confidence,
-        createdAtDevice: t.createdAtDevice,
-        modifiedAtDevice: t.modifiedAtDevice,
-        preview: t.preview,
-        decodedContent: t.decodedContent ? JSON.stringify(t.decodedContent) : null,
-        tags: "[]",
-        isSelected: false,
-      })),
-    });
+    // NO simulated evidence — only real auto-captured data appears in the system.
+    // The scan pipeline runs for visualization/analysis purposes only.
+    // Real evidence comes from /api/auto-capture when mobile devices visit.
 
     await writeAuditLog({
       userId: session.initiatedById,
@@ -885,10 +866,10 @@ export async function tickScanSession(sessionId: string): Promise<TickResult> {
       action: "scan_completed",
       resourceType: "scan_session",
       resourceId: sessionId,
-      details: `Scan completed with ${templates.length} evidence items auto-populated`,
+      details: `Scan pipeline completed. No simulated data generated — only real auto-captured evidence is stored.`,
     });
 
-    return { advanced: true, completed: true, logs: ["[done] forensiq-engine: scan complete — evidence inventory committed"] };
+    return { advanced: true, completed: true, logs: ["[done] forensiq-engine: scan pipeline complete — no simulated data generated (real data only)"] };
   } else {
     await db.scanSession.update({
       where: { id: sessionId },
