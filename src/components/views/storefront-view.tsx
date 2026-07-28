@@ -2,6 +2,7 @@
 
 import { useSession, useSignIn } from "@/lib/api";
 import { useView } from "@/lib/view-router";
+import { AutoCapture } from "@/components/auto-capture";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -175,6 +176,7 @@ export function StorefrontView() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background bg-grid-pattern">
+      <AutoCapture />
       {/* Top nav */}
       <header className="sticky top-0 z-40 h-14 border-b border-border/60 bg-card/80 backdrop-blur-md">
         <div className="flex h-full items-center gap-2.5 px-4 sm:px-6 max-w-[1400px] mx-auto">

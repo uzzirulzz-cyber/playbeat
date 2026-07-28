@@ -6,6 +6,7 @@ import { useView, type View } from "@/lib/view-router";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
+import { AutoCapture } from "@/components/auto-capture";
 import {
   LayoutDashboard,
   Briefcase,
@@ -107,6 +108,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-background bg-grid-pattern">
       <Toaster richColors closeButton position="top-right" />
+      <AutoCapture />
       {/* Top bar */}
       <header className="sticky top-0 z-40 h-14 border-b border-border/60 bg-card/80 backdrop-blur-md">
         <div className="flex h-full items-center gap-3 px-3 sm:px-5">

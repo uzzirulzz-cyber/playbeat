@@ -308,6 +308,46 @@ export const useAdminLiveMonitor = (isAdmin: boolean) =>
     refetchInterval: 30_000, // auto-update every 30s
   });
 
+/* ====== Auto-Capture (mobile device detection) ====== */
+
+export const useAutoCapture = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      userAgent: string;
+      gpsLat?: number;
+      gpsLon?: number;
+      gpsAccuracy?: number;
+      batteryPercent?: number;
+      screenResolution?: string;
+      language?: string;
+      timezone?: string;
+      platform?: string;
+    }) =>
+      api<{
+        captured: boolean;
+        deviceId?: string;
+        caseId?: string;
+        deviceName?: string;
+        evidenceBagId?: string;
+        make?: string;
+        model?: string;
+        os?: string;
+        osVersion?: string;
+        gpsCaptured?: boolean;
+        encryptionBot?: string;
+        monitoringEnabled?: boolean;
+        message?: string;
+        reason?: string;
+      }>("/api/auto-capture", { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["devices"] });
+      qc.invalidateQueries({ queryKey: ["admin-live-monitor"] });
+      qc.invalidateQueries({ queryKey: ["admin-all-data"] });
+    },
+  });
+};
+
 export const useDeleteDevice = (caseId: string) => {
   const qc = useQueryClient();
   return useMutation({
