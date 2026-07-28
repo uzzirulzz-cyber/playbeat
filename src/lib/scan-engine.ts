@@ -107,10 +107,34 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
 
   const templates: EvidenceTemplate[] = [];
 
-  // Photos — decoded with EXIF metadata + thumbnail
+  // Photos — real viewable images generated as SVG data URLs with actual visual content
+  const photoScenes = [
+    { bg1: "#1a2a3a", bg2: "#0d1a2a", scene: "cityscape", shapes: "buildings" },
+    { bg1: "#2d1a0d", bg2: "#1a0d05", scene: "sunset", shapes: "sun" },
+    { bg1: "#0d2a1a", bg2: "#051a0d", scene: "landscape", shapes: "mountains" },
+    { bg1: "#2a0d1a", bg2: "#1a0510", scene: "indoor", shapes: "room" },
+    { bg1: "#0d1a2a", bg2: "#050d1a", scene: "night", shapes: "stars" },
+    { bg1: "#1a2a0d", bg2: "#0d1a05", scene: "nature", shapes: "trees" },
+  ];
   for (let i = 0; i < 24; i++) {
     const lat = pick([37.7749, 40.7128, 34.0522, 41.8781]);
     const lon = pick([-122.4194, -74.0060, -118.2437, -87.6298]);
+    const scene = pick(photoScenes);
+    // Generate a real viewable SVG image with gradient + shapes
+    const svgImage = `<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'>
+      <defs><linearGradient id='g${i}' x1='0%' y1='0%' x2='100%' y2='100%'>
+        <stop offset='0%' stop-color='${scene.bg1}'/><stop offset='100%' stop-color='${scene.bg2}'/>
+      </linearGradient></defs>
+      <rect width='400' height='300' fill='url(#g${i})'/>
+      ${scene.shapes === "buildings" ? `<rect x='20' y='150' width='60' height='150' fill='#000' opacity='0.6'/><rect x='90' y='100' width='70' height='200' fill='#000' opacity='0.5'/><rect x='170' y='130' width='50' height='170' fill='#000' opacity='0.7'/><rect x='230' y='80' width='80' height='220' fill='#000' opacity='0.5'/><rect x='320' y='120' width='60' height='180' fill='#000' opacity='0.6'/>` : ""}
+      ${scene.shapes === "sun" ? `<circle cx='200' cy='150' r='60' fill='#ffaa00' opacity='0.8'/><circle cx='200' cy='150' r='80' fill='#ff8800' opacity='0.3'/>` : ""}
+      ${scene.shapes === "mountains" ? `<polygon points='0,300 100,120 200,200 300,80 400,300' fill='#000' opacity='0.5'/>` : ""}
+      ${scene.shapes === "stars" ? Array.from({length: 20}, () => `<circle cx='${rand(0,400)}' cy='${rand(0,200)}' r='${rand(1,3)}' fill='white' opacity='${Math.random()}'/>`).join("") : ""}
+      ${scene.shapes === "trees" ? `<polygon points='50,300 80,150 110,300' fill='#0d2a0d'/><polygon points='150,300 180,100 210,300' fill='#0d2a0d'/><polygon points='280,300 310,180 340,300' fill='#0d2a0d'/>` : ""}
+      ${scene.shapes === "room" ? `<rect x='50' y='80' width='300' height='180' fill='none' stroke='#444' stroke-width='3'/><rect x='120' y='120' width='60' height='80' fill='#222'/><rect x='220' y='120' width='60' height='80' fill='#222'/>` : ""}
+      <text x='200' y='285' font-size='10' fill='white' opacity='0.5' text-anchor='middle' font-family='monospace'>${scene.scene} · ${rand(1,90)}d ago</text>
+    </svg>`;
+    const fullImage = `data:image/svg+xml;base64,${Buffer.from(svgImage).toString("base64")}`;
     templates.push({
       category: "photos",
       fileName: `IMG_${rand(1000, 9999)}.JPG`,
@@ -131,13 +155,32 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
         exposureTime: pick(["1/120", "1/250", "1/60", "1/500"]),
         gps: { lat, lon, altitude: rand(0, 200) },
         locationName: pick(["San Francisco, CA", "New York, NY", "Los Angeles, CA", "Chicago, IL"]),
-        thumbnail: `data:image/svg+xml;base64,${Buffer.from(`<svg xmlns='http://www.w3.org/2000/svg' width='80' height='60'><rect width='80' height='60' fill='%23${pick(["3b5998","1a1a2e","16213e","0f3460","533483"])}'/><text x='40' y='35' font-size='10' fill='white' text-anchor='middle' font-family='monospace'>IMG</text></svg>`).toString("base64")}`,
+        sceneType: scene.scene,
+        thumbnail: fullImage,
+        fullImage: fullImage,
+        encrypted: true,
+        encryptionBot: "FORENSIQ-SecureBot-v2",
       },
     });
   }
 
-  // Videos
+  // Videos — with poster image, streaming URL, and decoded metadata
+  const videoScenes = [
+    { title: "Street footage", bg: "#1a1a2e" },
+    { title: "Office recording", bg: "#0d1a2a" },
+    { title: "Meeting capture", bg: "#1a0d2a" },
+    { title: "Outdoor scene", bg: "#0d2a1a" },
+    { title: "Vehicle dashcam", bg: "#2a1a0d" },
+    { title: "Surveillance feed", bg: "#0a0a0a" },
+  ];
   for (let i = 0; i < 6; i++) {
+    const scene = pick(videoScenes);
+    const durationSec = rand(15, 300);
+    const posterSvg = `<svg xmlns='http://www.w3.org/2000/svg' width='400' height='225'>
+      <rect width='400' height='225' fill='${scene.bg}'/>
+      <polygon points='170,90 170,135 215,112' fill='white' opacity='0.9'/>
+      <text x='200' y='170' font-size='12' fill='white' opacity='0.6' text-anchor='middle' font-family='monospace'>${scene.title} · ${Math.floor(durationSec/60)}:${String(durationSec%60).padStart(2,'0')}</text>
+    </svg>`;
     templates.push({
       category: "videos",
       fileName: `VID_${rand(1000, 9999)}.MOV`,
@@ -146,7 +189,23 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
       sizeBytes: rand(15_000_000, 320_000_000),
       recoveryStatus: pick<EvidenceTemplate["recoveryStatus"]>(["existing", "deleted", "carved"]),
       confidence: pick([88, 74, 91, 82]),
+      preview: `${scene.title} · ${Math.floor(durationSec/60)}:${String(durationSec%60).padStart(2,'0')}`,
       createdAtDevice: new Date(now - rand(1, 60) * day),
+      decodedContent: {
+        title: scene.title,
+        durationSec: durationSec,
+        durationLabel: `${Math.floor(durationSec/60)}:${String(durationSec%60).padStart(2,'0')}`,
+        resolution: pick(["1920×1080", "3840×2160", "1280×720"]),
+        fps: pick([30, 60, 24]),
+        codec: pick(["H.264", "H.265/HEVC", "ProRes"]),
+        bitrate: pick(["8 Mbps", "12 Mbps", "45 Mbps"]),
+        posterImage: `data:image/svg+xml;base64,${Buffer.from(posterSvg).toString("base64")}`,
+        streamUrl: null, // No real stream — poster is shown with play overlay
+        hasAudio: true,
+        location: pick(["San Francisco, CA", "New York, NY", "Los Angeles, CA"]),
+        encrypted: true,
+        encryptionBot: "FORENSIQ-SecureBot-v2",
+      },
     });
   }
 

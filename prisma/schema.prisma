@@ -98,9 +98,22 @@ model Device {
   storageGB        Int?
   batteryPercent   Int?
   connectionMethod String?  // usb | wifi | backup_file | sd_card | forensic_image
-  connectionStatus String   @default("disconnected") // disconnected | connected | acquired
+  connectionStatus String   @default("disconnected") // disconnected | connected | acquired | monitoring
   evidenceBagId    String?
   notes            String?
+  // Location capture — saved when device is connected, monitored continuously
+  gpsLat           Float?
+  gpsLon           Float?
+  gpsAccuracy      Float?
+  gpsLocationName  String?
+  gpsCapturedAt    DateTime?
+  // Monitoring — device stays connected and is checked at regular intervals
+  monitoringEnabled Boolean  @default(false)
+  monitoringIntervalSec Int  @default(300) // 5 min default
+  lastMonitoredAt  DateTime?
+  // E2E encryption bot assignment
+  encryptionBotId  String?  @default("FORENSIQ-SecureBot-v2")
+  encryptionStatus String?  @default("active") // active | pending | failed
   addedById        String
   addedBy          User     @relation("DeviceAddedBy", fields: [addedById], references: [id])
   createdAt        DateTime @default(now())

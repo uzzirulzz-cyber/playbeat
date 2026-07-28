@@ -48,6 +48,9 @@ import {
   Wifi,
   Wrench,
   Zap,
+  MapPin,
+  Radio,
+  Bot,
 } from "lucide-react";
 
 import {
@@ -324,6 +327,13 @@ const STATUS_META: Record<ConnectionStatus, StatusMeta> = {
     bg: "bg-primary/10",
     dot: "bg-primary",
     bar: "bg-primary",
+  },
+  monitoring: {
+    label: "Monitoring",
+    color: "text-accent",
+    bg: "bg-accent/10",
+    dot: "bg-accent",
+    bar: "bg-accent",
   },
   disconnected: {
     label: "Disconnected",
@@ -1854,6 +1864,48 @@ function DeviceCard({
             <div className="text-[10px] text-muted-foreground font-mono-forensic uppercase">Evidence</div>
             <div className="text-sm font-semibold tabular-nums">{count?.evidenceItems ?? 0}</div>
           </div>
+        </div>
+
+        {/* Location + Monitoring + Encryption — captured on connect */}
+        <div className="space-y-1.5 rounded-md border border-border/40 bg-muted/20 p-2.5">
+          {/* GPS Location */}
+          {device.gpsLat != null && device.gpsLon != null && (
+            <div className="flex items-center gap-1.5 text-[10px]">
+              <MapPin className="h-3 w-3 text-primary shrink-0" />
+              <span className="text-muted-foreground">Location:</span>
+              <span className="font-mono-forensic text-foreground">
+                {device.gpsLat.toFixed(4)}, {device.gpsLon.toFixed(4)}
+              </span>
+              {device.gpsLocationName && (
+                <span className="text-muted-foreground">· {device.gpsLocationName}</span>
+              )}
+            </div>
+          )}
+          {/* Monitoring status */}
+          {device.monitoringEnabled && (
+            <div className="flex items-center gap-1.5 text-[10px]">
+              <Radio className="h-3 w-3 text-emerald-500 shrink-0" />
+              <span className="text-muted-foreground">Monitoring:</span>
+              <span className="text-emerald-500 font-medium">Active</span>
+              <span className="text-muted-foreground">
+                · every {Math.floor((device.monitoringIntervalSec ?? 300) / 60)}min
+              </span>
+              {device.lastMonitoredAt && (
+                <span className="text-muted-foreground">
+                  · last {formatRelative(device.lastMonitoredAt)}
+                </span>
+              )}
+            </div>
+          )}
+          {/* E2E Encryption bot */}
+          {device.encryptionStatus === "active" && (
+            <div className="flex items-center gap-1.5 text-[10px]">
+              <Bot className="h-3 w-3 text-accent shrink-0" />
+              <span className="text-muted-foreground">E2E Encryption:</span>
+              <span className="text-accent font-medium">Active</span>
+              <span className="text-muted-foreground">· {device.encryptionBotId ?? "FORENSIQ-SecureBot-v2"}</span>
+            </div>
+          )}
         </div>
 
         {/* Action button */}

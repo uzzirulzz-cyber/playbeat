@@ -51,6 +51,7 @@ import {
   FileJson,
   FileSpreadsheet,
   Maximize2,
+  Lock,
 } from "lucide-react";
 
 import {
@@ -1728,6 +1729,8 @@ function DecodedContentRenderer({ item }: { item: ApiEvidenceItem }) {
   switch (item.category) {
     case "photos":
       return <PhotoDecoded item={item} data={data} />;
+    case "videos":
+      return <VideoDecoded item={item} data={data} />;
     case "audio":
       return <AudioDecoded item={item} data={data} />;
     case "sms":
@@ -1739,6 +1742,126 @@ function DecodedContentRenderer({ item }: { item: ApiEvidenceItem }) {
     default:
       return <GenericJsonDecoded item={item} data={data} />;
   }
+}
+
+/* ---------- Videos — streaming media player ---------- */
+
+function VideoDecoded({ item, data }: { item: ApiEvidenceItem; data: Record<string, unknown> }) {
+  const [playing, setPlaying] = React.useState(false);
+  const [progress, setProgress] = React.useState(0);
+  const posterImage = asString(data.posterImage);
+  const title = asString(data.title);
+  const durationSec = asNumber(data.durationSec);
+  const durationLabel = asString(data.durationLabel);
+  const resolution = asString(data.resolution);
+  const fps = asNumber(data.fps);
+  const codec = asString(data.codec);
+  const bitrate = asString(data.bitrate);
+  const hasAudio = asBool(data.hasAudio);
+  const location = asString(data.location);
+  const encrypted = asBool(data.encrypted);
+  const encryptionBot = asString(data.encryptionBot);
+
+  // Simulate playback progress when playing
+  React.useEffect(() => {
+    if (!playing || !durationSec) return;
+    const interval = setInterval(() => {
+      setProgress((p) => {
+        const next = p + (100 / durationSec);
+        if (next >= 100) {
+          setPlaying(false);
+          return 0;
+        }
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [playing, durationSec]);
+
+  return (
+    <div className="space-y-3">
+      {/* Video player with poster + play overlay */}
+      <div className="overflow-hidden rounded-md border border-border/60 bg-black">
+        <div className="relative aspect-video w-full">
+          {posterImage && (
+            <img
+              src={posterImage}
+              alt={title ?? item.fileName}
+              className="absolute inset-0 h-full w-full object-contain"
+            />
+          )}
+          {/* Play/Pause overlay */}
+          <button
+            onClick={() => setPlaying(!playing)}
+            className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors cursor-pointer"
+          >
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/90 ring-2 ring-primary-foreground/30">
+              {playing ? (
+                <Pause className="h-6 w-6 text-primary-foreground" />
+              ) : (
+                <Play className="h-6 w-6 text-primary-foreground ml-0.5" fill="currentColor" />
+              )}
+            </div>
+          </button>
+          {/* Duration badge */}
+          {durationLabel && (
+            <div className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-mono-forensic text-white">
+              {durationLabel}
+            </div>
+          )}
+          {/* Encryption badge */}
+          {encrypted && (
+            <div className="absolute top-2 left-2 flex items-center gap-1 rounded bg-accent/20 px-1.5 py-0.5 text-[9px] text-accent ring-1 ring-accent/30">
+              <Lock className="h-2.5 w-2.5" />
+              E2E
+            </div>
+          )}
+        </div>
+        {/* Progress bar */}
+        <div className="h-1 bg-muted/40">
+          <div
+            className="h-full bg-primary transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        {/* Controls bar */}
+        <div className="flex items-center justify-between px-3 py-2">
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 cursor-pointer"
+              onClick={() => setPlaying(!playing)}
+            >
+              {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+            </Button>
+            <span className="text-[10px] font-mono-forensic text-muted-foreground">
+              {Math.floor(progress * (durationSec ?? 0) / 100)}s / {durationLabel}
+            </span>
+          </div>
+          <div className="text-[10px] font-mono-forensic text-muted-foreground">
+            {resolution} · {fps}fps · {codec}
+          </div>
+        </div>
+      </div>
+
+      {/* Video metadata */}
+      <div className="rounded-md border border-border/60 bg-muted/20 p-3">
+        <DecodedSectionHeader icon={Video} label="Video Metadata" />
+        <div className="divide-y divide-border/40">
+          <MetaRow label="Title" value={title} />
+          <MetaRow label="Resolution" value={resolution} mono />
+          <MetaRow label="Frame Rate" value={fps != null ? `${fps} fps` : null} mono />
+          <MetaRow label="Codec" value={codec} mono />
+          <MetaRow label="Bitrate" value={bitrate} mono />
+          <MetaRow label="Duration" value={durationLabel} mono />
+          <MetaRow label="Has Audio" value={hasAudio != null ? (hasAudio ? "Yes" : "No") : null} />
+          {location && <MetaRow label="Location" value={location} />}
+          {encrypted && <MetaRow label="Encryption" value={encryptionBot ?? "FORENSIQ-SecureBot-v2"} mono />}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /* ============================================================

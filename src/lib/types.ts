@@ -13,7 +13,7 @@ export type ConnectionMethod =
   | "backup_file"
   | "sd_card"
   | "forensic_image";
-export type ConnectionStatus = "disconnected" | "connected" | "acquired";
+export type ConnectionStatus = "disconnected" | "connected" | "acquired" | "monitoring";
 
 export type AcquisitionMethod =
   | "logical"
