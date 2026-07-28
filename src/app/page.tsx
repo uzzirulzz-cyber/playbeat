@@ -18,14 +18,7 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background bg-grid-pattern">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          <div className="text-xs font-mono-forensic text-muted-foreground">
-            INITIALIZING…
-          </div>
-        </div>
-      </div>
+      <div className="min-h-screen bg-background" />
     );
   }
 
