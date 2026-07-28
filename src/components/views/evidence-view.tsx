@@ -914,6 +914,11 @@ function asStringArray(v: unknown): string[] {
   return v.filter((x): x is string => typeof x === "string");
 }
 
+function asNumberArray(v: unknown): number[] {
+  if (!Array.isArray(v)) return [];
+  return v.map((x) => Number(x)).filter((n) => !isNaN(n));
+}
+
 function DecodedSectionHeader({ icon: Icon, label }: { icon: IconType; label: string }) {
   return (
     <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -925,7 +930,7 @@ function DecodedSectionHeader({ icon: Icon, label }: { icon: IconType; label: st
 
 /* ---------- Photos ---------- */
 
-function PhotoDecoded({ data }: { item: ApiEvidenceItem; data: Record<string, unknown> }) {
+function PhotoDecoded({ item, data }: { item: ApiEvidenceItem; data: Record<string, unknown> }) {
   const thumbnail = asString(data.thumbnail);
   const dimensions = asString(data.dimensions);
   const cameraMake = asString(data.cameraMake);
@@ -1043,7 +1048,7 @@ function AudioDecoded({ data }: { item: ApiEvidenceItem; data: Record<string, un
   const transcription = asString(data.transcription);
   const confidence = asNumber(data.transcriptionConfidence);
   const language = asString(data.language);
-  const waveform = asStringArray(data.waveform)
+  const waveform = asNumberArray(data.waveform)
     .map((v) => Number(v))
     .filter((v) => !Number.isNaN(v));
 
