@@ -35,13 +35,17 @@ async function api<T>(
     const qs = sp.toString();
     if (qs) url += `?${qs}`;
   }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
   const res = await fetch(url, {
     ...init,
+    signal: controller.signal,
     headers: {
       "Content-Type": "application/json",
       ...(init.headers || {}),
     },
   });
+  clearTimeout(timeoutId);
   if (!res.ok) {
     let msg = `Request failed (${res.status})`;
     try {
@@ -59,7 +63,9 @@ export const useSession = () =>
   useQuery({
     queryKey: ["session"],
     queryFn: () => api<{ user: ApiUser | null; organization: { id: string; name: string; licenseType: string } | null }>("/api/session"),
-    retry: false,
+    retry: 3,
+    retryDelay: 1000,
+    staleTime: 30000,
   });
 
 export const useActivate = () => {
@@ -138,7 +144,8 @@ export const useOrganization = () =>
         activatedAt: string;
         expiresAt: string | null;
       }>("/api/organization"),
-    retry: false,
+    retry: 2,
+    retryDelay: 1000,
   });
 
 /* ====== Cases ====== */
