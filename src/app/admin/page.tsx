@@ -38,6 +38,8 @@ export default function AdminPage() {
       try {
         await signIn.mutateAsync({ email, password });
         toast.success("Signed in");
+        // Force full page reload so the session cookie takes effect
+        setTimeout(() => window.location.reload(), 500);
       } catch (e) {
         toast.error((e as Error).message);
       }
@@ -59,7 +61,7 @@ export default function AdminPage() {
               <Label className="text-xs">Email</Label>
               <Input
                 type="email"
-                placeholder="admin@agency.gov"
+                placeholder="crdbix@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSignIn()}
