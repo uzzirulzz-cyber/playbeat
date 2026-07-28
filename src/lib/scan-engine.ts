@@ -238,6 +238,9 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
         waveform: Array.from({ length: 40 }, () => rand(10, 100)),
         language: "en-US",
         transcriptionConfidence: rand(82, 99),
+        decoded: true,
+        encrypted: true,
+        encryptionBot: "FORENSIQ-SecureBot-v2",
       },
     });
   }
