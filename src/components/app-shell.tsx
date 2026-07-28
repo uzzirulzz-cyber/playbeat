@@ -16,6 +16,7 @@ import {
   Power,
   FlaskConical,
   Bell,
+  Store,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,12 @@ const NAV_ITEMS: Array<{
   view: View;
   match: (v: View) => boolean;
 }> = [
+  {
+    label: "Storefront",
+    icon: <Store className="w-4 h-4" />,
+    view: { name: "storefront" },
+    match: (v) => v.name === "storefront",
+  },
   {
     label: "Dashboard",
     icon: <LayoutDashboard className="w-4 h-4" />,

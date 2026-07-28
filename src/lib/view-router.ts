@@ -3,6 +3,7 @@
 import { create } from "zustand";
 
 export type View =
+  | { name: "storefront" }
   | { name: "dashboard" }
   | { name: "cases" }
   | { name: "case"; caseId: string; tab?: CaseTab }
@@ -27,7 +28,7 @@ interface ViewState {
 }
 
 export const useView = create<ViewState>((set) => ({
-  view: { name: "dashboard" },
+  view: { name: "storefront" },
   go: (v) => set({ view: v }),
   goCase: (caseId, tab) => set({ view: { name: "case", caseId, tab } }),
 }));

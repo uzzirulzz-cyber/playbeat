@@ -3,6 +3,7 @@
 import { useSession } from "@/lib/api";
 import { ActivationFlow } from "@/components/activation-flow";
 import { AppShell } from "@/components/app-shell";
+import { StorefrontView } from "@/components/views/storefront-view";
 import { DashboardView } from "@/components/views/dashboard-view";
 import { CasesView } from "@/components/views/cases-view";
 import { CaseDetailView } from "@/components/views/case-detail-view";
@@ -27,6 +28,14 @@ export default function Home() {
         </div>
       </div>
     );
+  }
+
+  // Storefront is public — always accessible
+  if (view.name === "storefront") {
+    if (session?.user && session.organization) {
+      return <StorefrontView />;
+    }
+    return <StorefrontView />;
   }
 
   // Not authenticated
