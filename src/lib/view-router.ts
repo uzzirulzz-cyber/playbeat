@@ -76,7 +76,12 @@ function hashToView(hash: string): View {
 }
 
 export const useView = create<ViewState>((set, get) => ({
-  view: hashToView(typeof window !== "undefined" ? window.location.hash : ""),
+  view: (() => {
+    if (typeof window === "undefined") return { name: "admin" as const };
+    const hashView = hashToView(window.location.hash);
+    // Default to admin for authenticated users
+    return hashView.name === "storefront" ? { name: "admin" as const } : hashView;
+  })(),
   go: (v) => {
     const hash = viewToHash(v);
     if (typeof window !== "undefined" && window.location.hash !== hash) {

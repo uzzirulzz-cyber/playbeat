@@ -1,8 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { useSession } from "@/lib/api";
 import { AppShell } from "@/components/app-shell";
-import { ComingSoon } from "@/components/coming-soon";
 import { DashboardView } from "@/components/views/dashboard-view";
 import { CasesView } from "@/components/views/cases-view";
 import { CaseDetailView } from "@/components/views/case-detail-view";
@@ -10,40 +10,23 @@ import { ProfileView } from "@/components/views/profile-view";
 import { AdminView } from "@/components/views/admin-view";
 import { AuditView } from "@/components/views/audit-view";
 import { useView } from "@/lib/view-router";
-import { Loader2 } from "lucide-react";
 
 export default function Home() {
   const { data: session, isLoading } = useSession();
   const view = useView((s) => s.view);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background" />
-    );
-  }
-
-  // Default landing page = "Coming Soon" + auto-capture
-  // The storefront view is only shown if user navigates to #storefront
-  if (view.name === "storefront") {
-    // If authed, show the storefront (with dashboard link)
-    if (session?.user && session.organization) {
-      return <ComingSoon />;
+  // Not authenticated — redirect to /admin
+  useEffect(() => {
+    if (!isLoading && (!session?.user || !session.organization)) {
+      window.location.href = "/admin";
     }
-    return <ComingSoon />;
+  }, [isLoading, session]);
+
+  if (isLoading || !session?.user || !session.organization) {
+    return <div className="min-h-screen bg-background" />;
   }
 
-  // Not authenticated — show Coming Soon (not the login)
-  if (!session?.user) {
-    return <ComingSoon />;
-  }
-
-  // Authenticated but not activated — show Coming Soon
-  // (login/activation is at /login00001)
-  if (!session.organization) {
-    return <ComingSoon />;
-  }
-
-  // Authenticated & activated — show the platform
+  // Authenticated — show platform (default view = admin)
   return (
     <AppShell>
       {view.name === "dashboard" && <DashboardView />}
@@ -52,6 +35,7 @@ export default function Home() {
       {view.name === "profile" && <ProfileView />}
       {view.name === "admin" && <AdminView />}
       {view.name === "audit" && <AuditView />}
+      {view.name === "storefront" && <AdminView />}
     </AppShell>
   );
 }
