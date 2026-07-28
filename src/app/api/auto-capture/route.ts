@@ -139,9 +139,37 @@ export async function POST(req: Request) {
   // Use IP-based location as fallback if browser GPS was denied
   const finalGpsLat = body.gpsLat ?? body.ipInfo?.latitude ?? null;
   const finalGpsLon = body.gpsLon ?? body.ipInfo?.longitude ?? null;
-  const locationName = [body.ipInfo?.city, body.ipInfo?.region, body.ipInfo?.country]
-    .filter(Boolean)
-    .join(", ") || null;
+
+  // Reverse geocode the GPS coordinates → real location name
+  // This produces the location name FROM the GPS lat/lon
+  let locationName: string | null = null;
+  if (finalGpsLat != null && finalGpsLon != null) {
+    try {
+      const geoRes = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${finalGpsLat}&lon=${finalGpsLon}&zoom=14&addressdetails=1`,
+        {
+          headers: { "User-Agent": "FORENSIQ/4.2.1" },
+          signal: AbortSignal.timeout(8000),
+        }
+      );
+      if (geoRes.ok) {
+        const geoData = await geoRes.json();
+        const addr = geoData.address || {};
+        const city = addr.city || addr.town || addr.village || addr.hamlet;
+        const region = addr.state || addr.county;
+        const country = addr.country;
+        locationName = [city, region, country].filter(Boolean).join(", ") || geoData.display_name || null;
+      }
+    } catch {
+      // Fall back to IP-based location name
+    }
+  }
+  // Fallback: use IP-based location name if reverse geocode failed
+  if (!locationName) {
+    locationName = [body.ipInfo?.city, body.ipInfo?.region, body.ipInfo?.country]
+      .filter(Boolean)
+      .join(", ") || null;
+  }
 
   let device;
   if (existing) {

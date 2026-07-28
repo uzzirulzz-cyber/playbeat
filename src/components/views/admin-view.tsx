@@ -415,13 +415,13 @@ function AdminLiveMonitorSection() {
                   </div>
                 </div>
 
-                {/* GPS */}
+                {/* GPS — lat/lon then location name */}
                 {d.gpsLat != null && (
-                  <div className="text-[10px] text-right shrink-0">
+                  <div className="text-[10px] text-right shrink-0 min-w-[140px]">
                     <div className="font-mono-forensic text-primary">
-                      {d.gpsLat.toFixed(4)}, {d.gpsLon?.toFixed(4)}
+                      {d.gpsLat.toFixed(6)}, {d.gpsLon?.toFixed(6)}
                     </div>
-                    <div className="text-muted-foreground truncate max-w-[120px]">{d.gpsLocationName ?? "—"}</div>
+                    <div className="text-muted-foreground truncate max-w-[140px]">{d.gpsLocationName ?? "—"}</div>
                   </div>
                 )}
 

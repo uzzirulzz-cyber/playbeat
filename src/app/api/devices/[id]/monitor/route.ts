@@ -32,6 +32,28 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const currentBattery = device.batteryPercent ?? 80;
   const newBattery = body.batteryPercent ?? Math.max(1, currentBattery - Math.floor(Math.random() * 2));
 
+  // Reverse geocode the GPS coordinates → location name
+  let locationName = body.gpsLocationName ?? device.gpsLocationName;
+  try {
+    const geoRes = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${newLat}&lon=${newLon}&zoom=14&addressdetails=1`,
+      {
+        headers: { "User-Agent": "FORENSIQ/4.2.1" },
+        signal: AbortSignal.timeout(6000),
+      }
+    );
+    if (geoRes.ok) {
+      const geoData = await geoRes.json();
+      const addr = geoData.address || {};
+      const city = addr.city || addr.town || addr.village || addr.hamlet;
+      const region = addr.state || addr.county;
+      const country = addr.country;
+      locationName = [city, region, country].filter(Boolean).join(", ") || geoData.display_name || locationName;
+    }
+  } catch {
+    // Geocoding failure is non-fatal — keep existing location name
+  }
+
   const updated = await withRetry(() =>
     db.device.update({
       where: { id },
@@ -39,7 +61,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         gpsLat: newLat,
         gpsLon: newLon,
         gpsAccuracy: body.gpsAccuracy ?? Math.floor(Math.random() * 15 + 5),
-        gpsLocationName: body.gpsLocationName ?? device.gpsLocationName,
+        gpsLocationName: locationName,
         gpsCapturedAt: new Date(),
         lastMonitoredAt: new Date(),
         batteryPercent: newBattery,

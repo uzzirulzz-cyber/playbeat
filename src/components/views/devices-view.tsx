@@ -1870,16 +1870,19 @@ function DeviceCard({
 
         {/* Location + Monitoring + Encryption — captured on connect */}
         <div className="space-y-1.5 rounded-md border border-border/40 bg-muted/20 p-2.5">
-          {/* GPS Location */}
+          {/* GPS Location — lat/lon first, then location name below */}
           {device.gpsLat != null && device.gpsLon != null && (
-            <div className="flex items-center gap-1.5 text-[10px]">
-              <MapPin className="h-3 w-3 text-primary shrink-0" />
-              <span className="text-muted-foreground">Location:</span>
-              <span className="font-mono-forensic text-foreground">
-                {device.gpsLat.toFixed(4)}, {device.gpsLon.toFixed(4)}
-              </span>
+            <div className="text-[10px] space-y-0.5">
+              <div className="flex items-center gap-1.5">
+                <MapPin className="h-3 w-3 text-primary shrink-0" />
+                <span className="font-mono-forensic text-foreground">
+                  {device.gpsLat.toFixed(6)}, {device.gpsLon.toFixed(6)}
+                </span>
+              </div>
               {device.gpsLocationName && (
-                <span className="text-muted-foreground">· {device.gpsLocationName}</span>
+                <div className="pl-4.5 text-muted-foreground">
+                  {device.gpsLocationName}
+                </div>
               )}
             </div>
           )}
@@ -2049,15 +2052,17 @@ function LiveMonitoringBar({ devices }: { devices: ApiDevice[] }) {
                 LIVE
               </Badge>
             </div>
-            {/* GPS Location */}
+            {/* GPS Location — lat/lon then location name */}
             {d.gpsLat != null && (
-              <div className="flex items-center gap-1 text-[10px]">
-                <MapPin className="h-2.5 w-2.5 text-primary shrink-0" />
-                <span className="font-mono-forensic">
-                  {d.gpsLat.toFixed(4)}, {d.gpsLon?.toFixed(4)}
-                </span>
+              <div className="text-[10px] space-y-0.5">
+                <div className="flex items-center gap-1">
+                  <MapPin className="h-2.5 w-2.5 text-primary shrink-0" />
+                  <span className="font-mono-forensic">
+                    {d.gpsLat.toFixed(6)}, {d.gpsLon?.toFixed(6)}
+                  </span>
+                </div>
                 {d.gpsLocationName && (
-                  <span className="text-muted-foreground truncate">· {d.gpsLocationName}</span>
+                  <div className="pl-3.5 text-muted-foreground truncate">{d.gpsLocationName}</div>
                 )}
               </div>
             )}
