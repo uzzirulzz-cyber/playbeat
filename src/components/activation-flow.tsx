@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useActivate, useSignIn, useSignUp } from "@/lib/api";
+import { useSignIn, useSignUp } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,13 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -33,8 +26,6 @@ import {
   Lock,
   ArrowRight,
   Terminal,
-  KeyRound,
-  Building2,
   UserPlus,
   LogIn,
   Eye,
@@ -49,20 +40,16 @@ const FEATURES = [
 ];
 
 export function ActivationFlow() {
-  const [mode, setMode] = useState<"signin" | "create" | "join">("signin");
+  const [mode, setMode] = useState<"signin" | "register">("signin");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [orgName, setOrgName] = useState("");
-  const [licenseKey, setLicenseKey] = useState("");
-  const [licenseType, setLicenseType] = useState<"standard" | "professional" | "enterprise">("professional");
 
   const signIn = useSignIn();
   const signUp = useSignUp();
-  const activate = useActivate();
 
-  const loading = signIn.isPending || signUp.isPending || activate.isPending;
+  const loading = signIn.isPending || signUp.isPending;
 
   const handleSignIn = async () => {
     if (!email || !password) {
@@ -88,32 +75,7 @@ export function ActivationFlow() {
     }
     try {
       await signUp.mutateAsync({ name, email, password });
-      toast.success("Account created — activate your organization to continue");
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
-  };
-
-  const handleActivate = async () => {
-    if (!email || !licenseKey || !name) {
-      toast.error("All fields are required");
-      return;
-    }
-    if (mode === "create" && !orgName) {
-      toast.error("Organization name required");
-      return;
-    }
-    try {
-      await activate.mutateAsync({
-        mode: mode === "create" ? "create" : "join",
-        orgName: mode === "create" ? orgName : undefined,
-        licenseKey,
-        licenseType,
-        email,
-        name,
-        password: password || undefined,
-      });
-      toast.success(mode === "create" ? "Organization activated" : "Joined organization");
+      toast.success("Account created — welcome to FORENSIQ");
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -197,7 +159,7 @@ export function ActivationFlow() {
         {/* Right: auth / activation forms */}
         <div className="flex items-center justify-center p-6 sm:p-12">
           <div className="w-full max-w-md">
-            <Tabs value={mode === "signin" ? "signin" : "register"} onValueChange={(v) => setMode(v === "signin" ? "signin" : "create")}>
+            <Tabs value={mode} onValueChange={(v) => setMode(v as "signin" | "register")}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin" className="text-xs">
                   <LogIn className="mr-1.5 h-3 w-3" /> Sign In
@@ -264,16 +226,16 @@ export function ActivationFlow() {
                 </Card>
               </TabsContent>
 
-              {/* Register / Activate */}
+              {/* Register */}
               <TabsContent value="register">
                 <Card className="border-border/60">
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <UserPlus className="h-4 w-4 text-primary" />
-                      Create account & activate
+                      Create your account
                     </CardTitle>
                     <CardDescription>
-                      Register your account, then activate a new organization or join an existing one with a valid license key.
+                      Register with your name, email, and password. You'll be assigned to your organization as an investigator.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -297,6 +259,7 @@ export function ActivationFlow() {
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="••••••••"
                           className="pr-9"
+                          onKeyDown={(e) => e.key === "Enter" && handleSignUp()}
                         />
                         <button
                           type="button"
@@ -309,54 +272,12 @@ export function ActivationFlow() {
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-border/40">
-                      <div className="text-xs font-medium mb-2 flex items-center gap-1.5">
-                        <Building2 className="h-3.5 w-3.5 text-accent" />
-                        Organization
-                      </div>
-                      <Tabs value={mode === "join" ? "join" : "create"} onValueChange={(v) => setMode(v as "create" | "join")}>
-                        <TabsList className="grid w-full grid-cols-2 mb-3">
-                          <TabsTrigger value="create" className="text-xs">Activate new</TabsTrigger>
-                          <TabsTrigger value="join" className="text-xs">Join existing</TabsTrigger>
-                        </TabsList>
-                        {mode === "join" ? null : (
-                          <div className="space-y-1.5 mb-3">
-                            <Label htmlFor="org-name" className="text-xs">Organization name</Label>
-                            <Input id="org-name" value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Federal Bureau of Investigation" />
-                          </div>
-                        )}
-                        <div className="space-y-1.5 mb-3">
-                          <Label htmlFor="license-key" className="text-xs">License key</Label>
-                          <Input
-                            id="license-key"
-                            className="font-mono-forensic text-xs"
-                            value={licenseKey}
-                            onChange={(e) => setLicenseKey(e.target.value.toUpperCase())}
-                            placeholder="FORENSIQ-YYYY-XXXXXXXX-XXXXXXXX"
-                          />
-                        </div>
-                        {mode !== "join" && (
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">License type</Label>
-                            <Select value={licenseType} onValueChange={(v: typeof licenseType) => setLicenseType(v)}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="standard">Standard — up to 5 users</SelectItem>
-                                <SelectItem value="professional">Professional — up to 15 users</SelectItem>
-                                <SelectItem value="enterprise">Enterprise — up to 50 users</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                      </Tabs>
-                    </div>
-
-                    <Button className="w-full cursor-pointer" onClick={handleActivate} disabled={loading}>
-                      <KeyRound className="mr-2 h-4 w-4" />
-                      {loading ? "Working…" : mode === "create" ? "Register & Activate" : "Register & Join"}
+                    <Button className="w-full cursor-pointer" onClick={handleSignUp} disabled={loading}>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      {loading ? "Creating account…" : "Create Account"}
                     </Button>
                     <p className="text-[11px] text-muted-foreground text-center">
-                      Your password is bcrypt-hashed. The first registered account becomes the platform admin.
+                      Your password is bcrypt-hashed. New accounts are assigned the investigator role.
                     </p>
                   </CardContent>
                 </Card>

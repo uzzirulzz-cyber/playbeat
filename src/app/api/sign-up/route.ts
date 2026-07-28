@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { db, withRetry } from "@/lib/db";
-import { hashPassword, setSessionCookie } from "@/lib/auth";
+import { hashPassword, setSessionCookie, writeAuditLog } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // Sign-up: registers a new user account with email + name + password.
 // The first user to sign up becomes the single platform admin. All
-// subsequent users are created with the "investigator" role (no admin
-// escalation is possible from this endpoint).
+// subsequent users are created with the "investigator" role and
+// auto-assigned to the existing organization (if one exists).
 export async function POST(req: Request) {
   const { email, name, password } = (await req.json()) as {
     email: string;
@@ -57,6 +57,23 @@ export async function POST(req: Request) {
   const userCount = await withRetry(() => db.user.count());
   const role = userCount === 0 ? "admin" : "investigator";
 
+  // Auto-assign new users to the existing organization (if any).
+  // The admin creates the org; all subsequent registrations join it.
+  const existingOrg = await withRetry(() => db.organization.findFirst());
+
+  // Check org user limit before assigning
+  if (existingOrg) {
+    const memberCount = await withRetry(() =>
+      db.user.count({ where: { organizationId: existingOrg.id } })
+    );
+    if (memberCount >= existingOrg.maxUsers) {
+      return NextResponse.json(
+        { error: `Organization has reached its ${existingOrg.maxUsers}-user limit. Contact your administrator.` },
+        { status: 400 }
+      );
+    }
+  }
+
   const user = await withRetry(() =>
     db.user.create({
       data: {
@@ -67,10 +84,23 @@ export async function POST(req: Request) {
         mfaEnabled: false,
         lastActive: new Date(),
         tokenIdentifier: `email:${normalizedEmail}`,
+        organizationId: existingOrg?.id ?? null,
       },
       include: { organization: true },
     })
   );
+
+  // Write an audit log entry if the user joined an org
+  if (existingOrg) {
+    await writeAuditLog({
+      userId: user.id,
+      organizationId: existingOrg.id,
+      action: "user_registered",
+      resourceType: "user",
+      resourceId: user.id,
+      details: `New user ${user.email} registered and joined organization "${existingOrg.name}" as ${role}`,
+    });
+  }
 
   await setSessionCookie(user.id);
 
