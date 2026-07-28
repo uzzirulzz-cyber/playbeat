@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, withRetry } from "@/lib/db";
 import {
   setSessionCookie,
   writeAuditLog,
@@ -37,10 +37,12 @@ export async function POST(req: Request) {
   const normalizedEmail = body.email.toLowerCase();
 
   // Look up the user — they must have signed up first.
-  let user = await db.user.findUnique({
-    where: { email: normalizedEmail },
-    include: { organization: true },
-  });
+  let user = await withRetry(() =>
+    db.user.findUnique({
+      where: { email: normalizedEmail },
+      include: { organization: true },
+    })
+  );
 
   if (!user) {
     // Require a password to create the account inline.
@@ -53,9 +55,10 @@ export async function POST(req: Request) {
     const passwordHash = await hashPassword(body.password);
     // The very first user in the entire database becomes the single
     // platform admin. All subsequent users are investigators.
-    const userCount = await db.user.count();
+    const userCount = await withRetry(() => db.user.count());
     const role = userCount === 0 ? "admin" : "investigator";
-    user = await db.user.create({
+    user = await withRetry(() =>
+      db.user.create({
       data: {
         email: normalizedEmail,
         name: body.name.trim(),
@@ -65,19 +68,22 @@ export async function POST(req: Request) {
         lastActive: new Date(),
         tokenIdentifier: `email:${normalizedEmail}`,
       },
-      include: { organization: true },
-    });
+        include: { organization: true },
+      })
+    );
   } else {
-    user = await db.user.update({
-      where: { id: user.id },
-      data: { name: body.name.trim() || user.name, lastActive: new Date() },
-      include: { organization: true },
-    });
+    user = await withRetry(() =>
+      db.user.update({
+        where: { id: user.id },
+        data: { name: body.name.trim() || user.name, lastActive: new Date() },
+        include: { organization: true },
+      })
+    );
   }
 
   if (user.organizationId) {
     return NextResponse.json(
-      { error: "User already belongs to an organization. Sign out and create a new account to switch." },
+      { error: "This email is already registered with an organization. Sign in with your password instead, or use a different email to create a new account." },
       { status: 400 }
     );
   }
@@ -88,16 +94,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Organization name required" }, { status: 400 });
     }
     // Ensure the license key isn't already in use by another org.
-    const existingOrg = await db.organization.findUnique({
-      where: { licenseKey: body.licenseKey },
-    });
+    const existingOrg = await withRetry(() =>
+      db.organization.findUnique({
+        where: { licenseKey: body.licenseKey },
+      })
+    );
     if (existingOrg) {
       return NextResponse.json(
         { error: "This license key is already activated. Use 'Join' instead." },
         { status: 400 }
       );
     }
-    organization = await db.organization.create({
+    organization = await withRetry(() =>
+      db.organization.create({
       data: {
         name: body.orgName.trim(),
         licenseKey: body.licenseKey,
@@ -110,11 +119,13 @@ export async function POST(req: Request) {
             ? 5
             : 15,
       },
-    });
-    await db.user.update({
-      where: { id: user.id },
-      data: { organizationId: organization.id },
-    });
+    }));
+    await withRetry(() =>
+      db.user.update({
+        where: { id: user.id },
+        data: { organizationId: organization.id },
+      })
+    );
     await writeAuditLog({
       userId: user.id,
       organizationId: organization.id,
@@ -125,28 +136,34 @@ export async function POST(req: Request) {
     });
   } else {
     // Join existing org by license key
-    organization = await db.organization.findUnique({
-      where: { licenseKey: body.licenseKey },
-    });
+    organization = await withRetry(() =>
+      db.organization.findUnique({
+        where: { licenseKey: body.licenseKey },
+      })
+    );
     if (!organization) {
       return NextResponse.json(
         { error: "No organization found with that license key" },
         { status: 404 }
       );
     }
-    const memberCount = await db.user.count({
-      where: { organizationId: organization.id },
-    });
+    const memberCount = await withRetry(() =>
+      db.user.count({
+        where: { organizationId: organization.id },
+      })
+    );
     if (memberCount >= organization.maxUsers) {
       return NextResponse.json(
         { error: `Organization has reached its ${organization.maxUsers}-user limit` },
         { status: 400 }
       );
     }
-    await db.user.update({
-      where: { id: user.id },
-      data: { organizationId: organization.id },
-    });
+    await withRetry(() =>
+      db.user.update({
+        where: { id: user.id },
+        data: { organizationId: organization.id },
+      })
+    );
     await writeAuditLog({
       userId: user.id,
       organizationId: organization.id,
@@ -159,10 +176,12 @@ export async function POST(req: Request) {
 
   await setSessionCookie(user.id);
 
-  const freshUser = await db.user.findUnique({
-    where: { id: user.id },
-    include: { organization: true },
-  });
+  const freshUser = await withRetry(() =>
+    db.user.findUnique({
+      where: { id: user.id },
+      include: { organization: true },
+    })
+  );
 
   return NextResponse.json({
     user: {

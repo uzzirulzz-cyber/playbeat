@@ -332,7 +332,7 @@ export function ActivationFlow() {
                             className="font-mono-forensic text-xs"
                             value={licenseKey}
                             onChange={(e) => setLicenseKey(e.target.value.toUpperCase())}
-                            placeholder="FORENSIQ-YYYY-XXXXXX-XXXXXX"
+                            placeholder="FORENSIQ-YYYY-XXXXXXXX-XXXXXXXX"
                           />
                         </div>
                         {mode !== "join" && (

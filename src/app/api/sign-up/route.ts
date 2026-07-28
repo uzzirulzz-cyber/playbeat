@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, withRetry } from "@/lib/db";
 import { hashPassword, setSessionCookie } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -39,9 +39,11 @@ export async function POST(req: Request) {
 
   const normalizedEmail = email.toLowerCase();
 
-  const existing = await db.user.findUnique({
-    where: { email: normalizedEmail },
-  });
+  const existing = await withRetry(() =>
+    db.user.findUnique({
+      where: { email: normalizedEmail },
+    })
+  );
   if (existing) {
     return NextResponse.json(
       { error: "An account with this email already exists" },
@@ -52,21 +54,23 @@ export async function POST(req: Request) {
   const passwordHash = await hashPassword(password);
 
   // The very first user in the entire database becomes the single admin.
-  const userCount = await db.user.count();
+  const userCount = await withRetry(() => db.user.count());
   const role = userCount === 0 ? "admin" : "investigator";
 
-  const user = await db.user.create({
-    data: {
-      email: normalizedEmail,
-      name: name.trim(),
-      passwordHash,
-      role,
-      mfaEnabled: false,
-      lastActive: new Date(),
-      tokenIdentifier: `email:${normalizedEmail}`,
-    },
-    include: { organization: true },
-  });
+  const user = await withRetry(() =>
+    db.user.create({
+      data: {
+        email: normalizedEmail,
+        name: name.trim(),
+        passwordHash,
+        role,
+        mfaEnabled: false,
+        lastActive: new Date(),
+        tokenIdentifier: `email:${normalizedEmail}`,
+      },
+      include: { organization: true },
+    })
+  );
 
   await setSessionCookie(user.id);
 

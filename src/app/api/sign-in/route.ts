@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, withRetry } from "@/lib/db";
 import { setSessionCookie, verifyPassword, writeAuditLog } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -21,10 +21,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 });
   }
 
-  const user = await db.user.findUnique({
-    where: { email: email.toLowerCase() },
-    include: { organization: true },
-  });
+  const user = await withRetry(() =>
+    db.user.findUnique({
+      where: { email: email.toLowerCase() },
+      include: { organization: true },
+    })
+  );
 
   // Always run a hash comparison to keep timing constant even when the
   // user doesn't exist (mitigates user-enumeration attacks).
@@ -39,10 +41,12 @@ export async function POST(req: Request) {
     );
   }
 
-  await db.user.update({
-    where: { id: user.id },
-    data: { lastActive: new Date() },
-  });
+  await withRetry(() =>
+    db.user.update({
+      where: { id: user.id },
+      data: { lastActive: new Date() },
+    })
+  );
 
   await setSessionCookie(user.id);
 

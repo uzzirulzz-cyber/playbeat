@@ -146,9 +146,9 @@ export async function writeAuditLog(opts: {
 }
 
 /* ------------------------------ License keys ------------------------------- */
-// Real license-key validation. Format: FORENSIQ-YYYY-XXXXXX-XXXXXX
-// (alphanumeric segments). Demo keys are NOT accepted.
+// Real license-key validation. Format: FORENSIQ-YYYY-XXXXXXXX-XXXXXXXX
+// Accepts 4+ alphanumeric characters per segment after the year.
 
 export function isValidLicenseFormat(key: string): boolean {
-  return /^FORENSIQ-\d{4}-[A-Z0-9]{6}-[A-Z0-9]{6}$/.test(key);
+  return /^FORENSIQ-\d{4}-[A-Z0-9]{4,}-[A-Z0-9]{4,}$/.test(key);
 }
