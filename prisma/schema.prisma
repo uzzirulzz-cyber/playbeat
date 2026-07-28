@@ -175,7 +175,7 @@ model EvidenceItem {
   scanSession       ScanSession? @relation(fields: [scanSessionId], references: [id])
   deviceId          String?
   device            Device?   @relation(fields: [deviceId], references: [id])
-  category          String    // photos | videos | audio | sms | contacts | browser_history | call_logs | app_data | location_data | emails | documents | social_media | financial | calendar | notes | system_logs | network_data | other
+  category          String    // photos | videos | audio | sms | contacts | browser_history | call_logs | app_data | location_data | emails | documents | social_media | financial | calendar | notes | system_logs | network_data | credentials | installed_apps | other
   fileName          String
   filePath          String?
   mimeType          String?
@@ -189,6 +189,7 @@ model EvidenceItem {
   isSelected        Boolean   @default(false)
   notes             String?
   preview           String?   // text preview / data URL
+  decodedContent    String?   // JSON: structured decoded data (message thread, app info, credential entry, audio waveform, etc.)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 

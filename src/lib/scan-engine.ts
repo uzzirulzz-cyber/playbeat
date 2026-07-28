@@ -91,6 +91,7 @@ interface EvidenceTemplate {
   recoveryStatus: RecoveryStatus;
   confidence: number;
   preview?: string;
+  decodedContent?: Record<string, unknown>;
   createdAtDevice?: Date;
   modifiedAtDevice?: Date;
 }
@@ -106,8 +107,10 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
 
   const templates: EvidenceTemplate[] = [];
 
-  // Photos
+  // Photos — decoded with EXIF metadata + thumbnail
   for (let i = 0; i < 24; i++) {
+    const lat = pick([37.7749, 40.7128, 34.0522, 41.8781]);
+    const lon = pick([-122.4194, -74.0060, -118.2437, -87.6298]);
     templates.push({
       category: "photos",
       fileName: `IMG_${rand(1000, 9999)}.JPG`,
@@ -118,6 +121,18 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
       confidence: pick([85, 92, 78, 67, 95, 88]),
       createdAtDevice: new Date(now - rand(1, 90) * day),
       modifiedAtDevice: new Date(now - rand(0, 30) * day),
+      decodedContent: {
+        dimensions: pick(["4032×3024", "3024×4032", "4032×3024"]),
+        cameraMake: "Apple",
+        cameraModel: pick(["iPhone 15 Pro", "iPhone 14", "iPhone 13 Pro"]),
+        focalLength: pick(["5.7mm", "6.8mm", "7.5mm"]),
+        aperture: pick(["f/1.8", "f/2.2", "f/2.8"]),
+        iso: rand(32, 800),
+        exposureTime: pick(["1/120", "1/250", "1/60", "1/500"]),
+        gps: { lat, lon, altitude: rand(0, 200) },
+        locationName: pick(["San Francisco, CA", "New York, NY", "Los Angeles, CA", "Chicago, IL"]),
+        thumbnail: `data:image/svg+xml;base64,${Buffer.from(`<svg xmlns='http://www.w3.org/2000/svg' width='80' height='60'><rect width='80' height='60' fill='%23${pick(["3b5998","1a1a2e","16213e","0f3460","533483"])}'/><text x='40' y='35' font-size='10' fill='white' text-anchor='middle' font-family='monospace'>IMG</text></svg>`).toString("base64")}`,
+      },
     });
   }
 
@@ -135,8 +150,9 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
     });
   }
 
-  // Audio
+  // Audio — decoded with waveform + speech-to-text transcription
   for (let i = 0; i < 4; i++) {
+    const durationSec = rand(15, 600);
     templates.push({
       category: "audio",
       fileName: `voice_memo_${rand(1, 99)}.m4a`,
@@ -146,10 +162,28 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
       recoveryStatus: pick<EvidenceTemplate["recoveryStatus"]>(["existing", "deleted"]),
       confidence: pick([90, 85]),
       createdAtDevice: new Date(now - rand(1, 45) * day),
+      decodedContent: {
+        durationSec,
+        durationLabel: `${Math.floor(durationSec / 60)}:${String(durationSec % 60).padStart(2, "0")}`,
+        sampleRate: 44100,
+        channels: 1,
+        codec: "AAC",
+        bitrate: pick(["64kbps", "128kbps"]),
+        transcription: pick([
+          "Hey, it's me. Just calling to confirm the meeting tomorrow at 9 AM. Bring the documents we discussed. Talk soon.",
+          "I need you to delete those files from the server before anyone finds out. Do it tonight. Don't call me back on this number.",
+          "This is a recording of the conversation that took place on July 15th. The subject admitted to accessing the accounts without authorization.",
+          "Wire transfer confirmation number 8829-A. The funds have been moved to the offshore account as discussed. Keep this confidential.",
+          "Meet me at the usual spot at 9 PM sharp. Don't be late this time. And for god's sake, don't tell anyone about this.",
+        ]),
+        waveform: Array.from({ length: 40 }, () => rand(10, 100)),
+        language: "en-US",
+        transcriptionConfidence: rand(82, 99),
+      },
     });
   }
 
-  // SMS
+  // SMS — decoded as conversation thread with sender, timestamp, readable text
   const smsBodies = [
     "Hey, are we still on for tonight? 🍕",
     "I'll be there in 15 mins, traffic is awful",
@@ -162,7 +196,11 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
     "The package is ready for pickup.",
     "Made reservations at the place you like.",
   ];
+  const smsContactNames = ["Alex Morgan", "Jamie Rivera", "Sam Chen", "Unknown +1 555-0142", "Taylor Brooks"];
   for (let i = 0; i < 30; i++) {
+    const body = pick(smsBodies);
+    const sender = pick(smsContactNames);
+    const isOutgoing = Math.random() > 0.5;
     templates.push({
       category: "sms",
       fileName: `message_${rand(1000, 9999)}.json`,
@@ -171,9 +209,20 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
       sizeBytes: rand(180, 2200),
       recoveryStatus: pick<EvidenceTemplate["recoveryStatus"]>(["existing", "existing", "deleted", "carved"]),
       confidence: pick([95, 88, 72, 65]),
-      preview: pick(smsBodies),
+      preview: body,
       createdAtDevice: new Date(now - rand(1, 120) * day),
       modifiedAtDevice: new Date(now - rand(0, 60) * day),
+      decodedContent: {
+        direction: isOutgoing ? "outgoing" : "incoming",
+        sender: isOutgoing ? "Device Owner" : sender,
+        recipient: isOutgoing ? sender : "Device Owner",
+        phoneNumber: `+1 ${rand(200, 999)}-${rand(200, 999)}-${rand(1000, 9999)}`,
+        body,
+        readStatus: pick(["read", "unread", "delivered"]),
+        messageType: "SMS",
+        decoded: true,
+        language: "en",
+      },
     });
   }
 
@@ -406,6 +455,104 @@ export function generateEvidenceTemplates(deviceId?: string): EvidenceTemplate[]
     });
   }
 
+  // Credentials — extracted keychain entries with decoded passwords
+  const credServices = [
+    "com.apple.accounts", "com.apple.iCloud", "WhatsApp", "Telegram",
+    "Instagram", "Facebook", "Twitter/X", "Gmail", "Outlook", "ProtonMail",
+    "Cash App", "Venmo", "PayPal", "Coinbase", "Binance", "Discord",
+    "Slack", "Netflix", "Spotify", "Amazon", "AppleID",
+  ];
+  for (let i = 0; i < 18; i++) {
+    const service = pick(credServices);
+    templates.push({
+      category: "credentials",
+      fileName: `keychain_${service.toLowerCase().replace(/[^a-z]/g, "_")}_${rand(1, 999)}.json`,
+      filePath: `${devicePrefix}Library/Keychains/keychain.db:entry:${rand(1, 9999)}`,
+      mimeType: "application/x-keychain-entry",
+      sizeBytes: rand(120, 600),
+      recoveryStatus: pick<EvidenceTemplate["recoveryStatus"]>(["existing", "existing", "deleted", "carved"]),
+      confidence: pick([96, 92, 78, 65]),
+      preview: `${service} • ${pick(["user@email.com", "+1 555-0142", "subject_account"])}`,
+      createdAtDevice: new Date(now - rand(0, 90) * day),
+      decodedContent: {
+        service,
+        account: pick([
+          "crdbix@gmail.com", "subject@protonmail.com", "user@outlook.com",
+          "+1 555-0142", "anonymous_user", "subject_account_01",
+        ]),
+        password: pick([
+          "Summer2024!", "P@ssw0rd123", "Tr0ub4dour&3",
+          "correcthorsebatterystaple", "q1w2e3r4t5", "Hunter2#2024",
+          "letmein2024", "Admin@12345",
+        ]),
+        tokenType: pick(["password", "oauth_token", "api_key", "session_cookie", "refresh_token"]),
+        tokenValue: `tok_${Math.random().toString(36).slice(2, 18)}${Math.random().toString(36).slice(2, 18)}`,
+        extractionMethod: pick(["keychain_dump", "sqlite_decrypt", "memory_carve", "plist_decode"]),
+        accessibleWhenUnlocked: true,
+        decoded: true,
+        securityLevel: pick(["strong", "moderate", "weak"]),
+      },
+    });
+  }
+
+  // Installed Apps — list of all installed applications with metadata
+  const apps = [
+    { name: "WhatsApp", bundle: "net.whatsapp.WhatsApp", version: "2.24.7.78", category: "social" },
+    { name: "Telegram", bundle: "ru.telegram.messenger", version: "10.12.0", category: "social" },
+    { name: "Signal", bundle: "org.thoughtcrime.securesms", version: "7.18.0", category: "social" },
+    { name: "Instagram", bundle: "com.burbn.instagram", version: "342.0.0", category: "social" },
+    { name: "TikTok", bundle: "com.zhiliaoapp.musically", version: "32.1.0", category: "social" },
+    { name: "Snapchat", bundle: "com.toyopagroup.picaboo", version: "12.85.0", category: "social" },
+    { name: "Discord", bundle: "com.hammerandchisel.discord", version: "243.0", category: "social" },
+    { name: "Cash App", bundle: "com.squareup.cash", version: "4.36.0", category: "financial" },
+    { name: "Venmo", bundle: "com.venmo", version: "10.43.0", category: "financial" },
+    { name: "Coinbase", bundle: "com.coinbase.consumer", version: "10.92.0", category: "financial" },
+    { name: "Binance", bundle: "com.binance.dev", version: "2.78.0", category: "financial" },
+    { name: "ProtonMail", bundle: "ch.protonmail.protonmail", version: "1.14.0", category: "communication" },
+    { name: "Gmail", bundle: "com.google.Gmail", version: "6.0.240416", category: "communication" },
+    { name: "Netflix", bundle: "com.netflix.mediaclient", version: "16.22.0", category: "media" },
+    { name: "Spotify", bundle: "com.spotify.client", version: "8.9.68", category: "media" },
+    { name: "Amazon", bundle: "com.amazon.mShop.android.shopping", version: "28.16.0", category: "shopping" },
+    { name: "Tor Browser", bundle: "org.torproject.torbrowser", version: "13.0.14", category: "privacy" },
+    { name: "VPN Express", bundle: "com.expressvpn.vpn", version: "12.73.0", category: "privacy" },
+    { name: "Notes", bundle: "com.apple.mobilenotes", version: "1.0", category: "productivity" },
+    { name: "Calculator", bundle: "com.apple.calculator", version: "1.0", category: "system" },
+  ];
+  for (const app of apps) {
+    templates.push({
+      category: "installed_apps",
+      fileName: `${app.bundle}.plist`,
+      filePath: `${devicePrefix}Containers/Bundle/Application/${rand(1000, 9999)}/${app.bundle}.app/Info.plist`,
+      mimeType: "application/x-plist",
+      sizeBytes: rand(2_000, 45_000),
+      recoveryStatus: pick<EvidenceTemplate["recoveryStatus"]>(["existing", "existing", "cached"]),
+      confidence: 99,
+      preview: `${app.name} v${app.version}`,
+      createdAtDevice: new Date(now - rand(1, 365) * day),
+      decodedContent: {
+        appName: app.name,
+        bundleId: app.bundle,
+        version: app.version,
+        appCategory: app.category,
+        installDate: new Date(now - rand(1, 365) * day).toISOString(),
+        lastUsed: new Date(now - rand(0, 30) * day).toISOString(),
+        dataSizeBytes: rand(5_000_000, 800_000_000),
+        cacheSizeBytes: rand(1_000_000, 200_000_000),
+        permissions: pick([
+          ["camera", "microphone", "location", "contacts"],
+          ["location", "photos", "storage"],
+          ["microphone", "notifications", "background_app_refresh"],
+          ["camera", "photos", "location", "contacts", "microphone"],
+          ["storage", "notifications"],
+        ]),
+        hasCredentials: pick([true, true, false]),
+        networkActivity: pick(["high", "moderate", "low", "none"]),
+        sandboxed: true,
+        decoded: true,
+      },
+    });
+  }
+
   return templates;
 }
 
@@ -515,6 +662,7 @@ export async function tickScanSession(sessionId: string): Promise<TickResult> {
         createdAtDevice: t.createdAtDevice,
         modifiedAtDevice: t.modifiedAtDevice,
         preview: t.preview,
+        decodedContent: t.decodedContent ? JSON.stringify(t.decodedContent) : null,
         tags: "[]",
         isSelected: false,
       })),

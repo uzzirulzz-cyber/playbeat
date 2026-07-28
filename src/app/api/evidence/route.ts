@@ -39,6 +39,7 @@ export async function GET(req: Request) {
       modifiedAtDevice: e.modifiedAtDevice?.toISOString() ?? null,
       createdAt: e.createdAt.toISOString(),
       updatedAt: e.updatedAt.toISOString(),
+      decodedContent: e.decodedContent ?? null,
     }))
   );
 }

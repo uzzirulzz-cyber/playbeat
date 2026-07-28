@@ -54,6 +54,8 @@ export type EvidenceCategory =
   | "notes"
   | "system_logs"
   | "network_data"
+  | "credentials"
+  | "installed_apps"
   | "other";
 
 export type RecoveryStatus =
@@ -209,6 +211,7 @@ export interface ApiEvidenceItem {
   isSelected: boolean;
   notes: string | null;
   preview: string | null;
+  decodedContent: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -512,3 +512,53 @@ export const useDashboard = () =>
         activityByDay: { day: string; count: number }[];
       }>(`/api/dashboard`),
   });
+
+export const useAdminAllData = () =>
+  useQuery({
+    queryKey: ["admin-all-data"],
+    queryFn: () =>
+      api<{
+        totals: {
+          cases: number;
+          users: number;
+          devices: number;
+          scans: number;
+          evidence: number;
+          selectedEvidence: number;
+          deliveries: number;
+        };
+        cases: (ApiCase & {
+          createdBy: { id: string; name: string; email: string; role: string };
+          assignedTo: { id: string; name: string; email: string } | null;
+          _count: {
+            devices: number;
+            scanSessions: number;
+            evidenceItems: number;
+            deliveries: number;
+          };
+        })[];
+        users: {
+          id: string;
+          email: string;
+          name: string | null;
+          role: string;
+          mfaEnabled: boolean;
+          lastActive: string | null;
+          createdAt: string;
+          _count: {
+            casesCreated: number;
+            devicesAdded: number;
+            acquisitions: number;
+            scansInitiated: number;
+            deliveriesCreated: number;
+            auditLogs: number;
+          };
+        }[];
+        recentEvidence: (ApiEvidenceItem & {
+          case: { id: string; caseNumber: string; title: string };
+        })[];
+        recentActivity: (ApiAuditLog & {
+          user: { id: string; name: string | null; email: string; role: string };
+        })[];
+      }>(`/api/admin/all-data`),
+  });

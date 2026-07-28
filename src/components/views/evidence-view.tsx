@@ -36,6 +36,17 @@ import {
   PanelLeft,
   HardDrive,
   FileSearch,
+  Eye,
+  EyeOff,
+  Play,
+  Pause,
+  Camera,
+  KeyRound,
+  Phone,
+  Volume2,
+  ShieldAlert,
+  Wifi,
+  Clock,
 } from "lucide-react";
 
 import {
@@ -117,6 +128,8 @@ const CATEGORY_META: Record<EvidenceCategory, CategoryMeta> = {
   notes: { label: "Notes", icon: StickyNote, color: "yellow" },
   system_logs: { label: "System Logs", icon: Cpu, color: "slate" },
   network_data: { label: "Network Data", icon: Network, color: "rose" },
+  credentials: { label: "Credentials", icon: KeyRound, color: "amber" },
+  installed_apps: { label: "Installed Apps", icon: AppWindow, color: "violet" },
   other: { label: "Other", icon: FileQuestion, color: "gray" },
 };
 
@@ -597,6 +610,812 @@ function EvidenceRow({
 }
 
 /* ============================================================
+ * Decoded content renderers
+ * ============================================================ */
+
+/** Safely parse the `decodedContent` JSON string on an evidence item. */
+function parseDecoded(item: ApiEvidenceItem): Record<string, unknown> | null {
+  if (!item.decodedContent) return null;
+  try {
+    const parsed = JSON.parse(item.decodedContent);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function asString(v: unknown): string | null {
+  return typeof v === "string" && v.length > 0 ? v : null;
+}
+function asNumber(v: unknown): number | null {
+  return typeof v === "number" && !Number.isNaN(v) ? v : null;
+}
+function asBool(v: unknown): boolean | null {
+  return typeof v === "boolean" ? v : null;
+}
+function asStringArray(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  return v.filter((x): x is string => typeof x === "string");
+}
+
+function DecodedSectionHeader({ icon: Icon, label }: { icon: IconType; label: string }) {
+  return (
+    <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <Icon className="size-3.5" />
+      {label}
+    </div>
+  );
+}
+
+/* ---------- Photos ---------- */
+
+function PhotoDecoded({ data }: { item: ApiEvidenceItem; data: Record<string, unknown> }) {
+  const thumbnail = asString(data.thumbnail);
+  const dimensions = asString(data.dimensions);
+  const cameraMake = asString(data.cameraMake);
+  const cameraModel = asString(data.cameraModel);
+  const focalLength = asString(data.focalLength);
+  const aperture = asString(data.aperture);
+  const iso = asNumber(data.iso);
+  const exposureTime = asString(data.exposureTime);
+  const locationName = asString(data.locationName);
+  const gps = data.gps as { lat?: number; lon?: number; altitude?: number } | undefined;
+  const cameraLabel =
+    cameraMake && cameraModel
+      ? `${cameraMake} ${cameraModel}`
+      : cameraMake ?? cameraModel ?? null;
+
+  return (
+    <div className="space-y-3">
+      {thumbnail && (
+        <div className="overflow-hidden rounded-md border border-border/60 bg-muted/30">
+          <img
+            src={thumbnail}
+            alt="Recovered thumbnail preview"
+            className="h-40 w-full object-contain"
+          />
+        </div>
+      )}
+
+      <div className="rounded-md border border-border/60 bg-muted/20 p-3">
+        <DecodedSectionHeader icon={Camera} label="EXIF Metadata" />
+        <div className="divide-y divide-border/40">
+          <MetaRow label="Dimensions" value={dimensions} mono />
+          <MetaRow label="Camera" value={cameraLabel} mono />
+          <MetaRow label="Focal Length" value={focalLength} mono />
+          <MetaRow label="Aperture" value={aperture} mono />
+          <MetaRow label="ISO" value={iso != null ? String(iso) : null} mono />
+          <MetaRow label="Exposure" value={exposureTime} mono />
+        </div>
+      </div>
+
+      {gps && (gps.lat != null || gps.lon != null) && (
+        <div className="rounded-md border border-border/60 bg-muted/20 p-3">
+          <DecodedSectionHeader icon={MapPin} label="GPS Location" />
+          <div className="divide-y divide-border/40">
+            <MetaRow
+              label="Latitude"
+              value={gps.lat != null ? gps.lat.toFixed(6) : null}
+              mono
+            />
+            <MetaRow
+              label="Longitude"
+              value={gps.lon != null ? gps.lon.toFixed(6) : null}
+              mono
+            />
+            <MetaRow
+              label="Altitude"
+              value={gps.altitude != null ? `${gps.altitude} m` : null}
+              mono
+            />
+            <MetaRow label="Location" value={locationName} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Audio ---------- */
+
+function AudioDecoded({ data }: { item: ApiEvidenceItem; data: Record<string, unknown> }) {
+  const [isPlaying, setIsPlaying] = React.useState(false);
+  const [progress, setProgress] = React.useState(0); // 0-100
+
+  const durationSec = asNumber(data.durationSec) ?? 0;
+  const durationLabel = asString(data.durationLabel) ?? "0:00";
+  const sampleRate = asNumber(data.sampleRate);
+  const channels = asNumber(data.channels);
+  const codec = asString(data.codec);
+  const bitrate = asString(data.bitrate);
+  const transcription = asString(data.transcription);
+  const confidence = asNumber(data.transcriptionConfidence);
+  const language = asString(data.language);
+  const waveform = asStringArray(data.waveform)
+    .map((v) => Number(v))
+    .filter((v) => !Number.isNaN(v));
+
+  React.useEffect(() => {
+    if (!isPlaying || durationSec <= 0) return;
+    const tickMs = 200;
+    const incrementPerTick = (tickMs / 1000 / durationSec) * 100;
+    const interval = setInterval(() => {
+      setProgress((p) => {
+        const next = p + incrementPerTick;
+        return next >= 100 ? 100 : next;
+      });
+    }, tickMs);
+    return () => clearInterval(interval);
+  }, [isPlaying, durationSec]);
+
+  React.useEffect(() => {
+    if (progress >= 100 && isPlaying) {
+      setIsPlaying(false);
+    }
+  }, [progress, isPlaying]);
+
+  function formatTime(percent: number): string {
+    if (durationSec <= 0) return "0:00";
+    const sec = Math.floor((percent / 100) * durationSec);
+    return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+  }
+
+  function togglePlay() {
+    if (progress >= 100) {
+      setProgress(0);
+      setIsPlaying(true);
+    } else {
+      setIsPlaying((p) => !p);
+    }
+  }
+
+  const confidenceColor =
+    confidence == null
+      ? null
+      : confidence >= 90
+        ? "green"
+        : confidence >= 75
+          ? "amber"
+          : "red";
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-md border border-border/60 bg-muted/20 p-3">
+        <DecodedSectionHeader icon={Volume2} label="Audio Player" />
+
+        <div className="flex items-center gap-3">
+          <Button
+            variant={isPlaying ? "secondary" : "default"}
+            className="size-9 shrink-0 rounded-full p-0"
+            onClick={togglePlay}
+            aria-label={isPlaying ? "Pause" : "Play"}
+          >
+            {isPlaying ? (
+              <Pause className="size-4" />
+            ) : (
+              <Play className="size-4 translate-x-px" />
+            )}
+          </Button>
+
+          <div className="min-w-0 flex-1">
+            {/* Waveform visualization */}
+            <div className="flex h-10 items-center gap-px">
+              {waveform.length > 0 ? (
+                waveform.map((v, i) => {
+                  const isActive = (i / waveform.length) * 100 <= progress;
+                  const heightPct = Math.max(8, Math.min(100, v));
+                  return (
+                    <div
+                      key={i}
+                      className={cn(
+                        "flex-1 rounded-sm transition-colors",
+                        isActive ? "bg-primary" : "bg-muted-foreground/30"
+                      )}
+                      style={{ height: `${heightPct}%` }}
+                    />
+                  );
+                })
+              ) : (
+                <div className="text-[11px] text-muted-foreground">
+                  No waveform data
+                </div>
+              )}
+            </div>
+
+            <div className="mt-1 flex items-center justify-between font-mono-forensic text-[10px] text-muted-foreground">
+              <span>{formatTime(progress)}</span>
+              <span>{durationLabel}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-md border border-border/60 bg-muted/20 p-3">
+        <DecodedSectionHeader icon={Volume2} label="Audio Metadata" />
+        <div className="divide-y divide-border/40">
+          <MetaRow label="Duration" value={durationLabel} mono />
+          <MetaRow label="Codec" value={codec} mono />
+          <MetaRow
+            label="Sample Rate"
+            value={sampleRate != null ? `${sampleRate.toLocaleString()} Hz` : null}
+            mono
+          />
+          <MetaRow
+            label="Channels"
+            value={
+              channels === 1
+                ? "Mono"
+                : channels === 2
+                  ? "Stereo"
+                  : channels != null
+                    ? String(channels)
+                    : null
+            }
+          />
+          <MetaRow label="Bitrate" value={bitrate} mono />
+          <MetaRow label="Language" value={language} mono />
+        </div>
+      </div>
+
+      {transcription && (
+        <div className="rounded-md border border-border/60 bg-muted/20 p-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <DecodedSectionHeader icon={MessageSquare} label="Transcription" />
+            {confidence != null && confidenceColor && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "gap-1 px-1.5 py-0 text-[10px] font-medium",
+                  COLOR_CLASSES[confidenceColor]?.border,
+                  COLOR_CLASSES[confidenceColor]?.text,
+                  COLOR_CLASSES[confidenceColor]?.bg
+                )}
+              >
+                <Volume2 className="size-2.5" />
+                {confidence}% confidence
+              </Badge>
+            )}
+          </div>
+          <div className="text-sm leading-relaxed text-foreground italic">
+            “{transcription}”
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- SMS ---------- */
+
+function SmsDecoded({ item, data }: { item: ApiEvidenceItem; data: Record<string, unknown> }) {
+  const isOutgoing = asString(data.direction) === "outgoing";
+  const sender = asString(data.sender);
+  const recipient = asString(data.recipient);
+  const phoneNumber = asString(data.phoneNumber);
+  const body = asString(data.body);
+  const readStatus = asString(data.readStatus);
+  const messageType = asString(data.messageType);
+  const language = asString(data.language);
+
+  const readColor =
+    readStatus === "read"
+      ? "green"
+      : readStatus === "unread"
+        ? "red"
+        : readStatus === "delivered"
+          ? "blue"
+          : "gray";
+
+  return (
+    <div className="rounded-md border border-border/60 bg-muted/20 p-3">
+      <DecodedSectionHeader icon={MessageSquare} label="Message" />
+
+      {/* Chat bubble */}
+      <div
+        className={cn(
+          "mb-3 flex flex-col gap-1",
+          isOutgoing ? "items-end" : "items-start"
+        )}
+      >
+        <div className="flex items-center gap-1.5 px-1 text-[10px] text-muted-foreground">
+          <span className="font-medium text-foreground">
+            {isOutgoing ? recipient ?? "Recipient" : sender ?? "Sender"}
+          </span>
+          {phoneNumber && (
+            <span className="font-mono-forensic">{phoneNumber}</span>
+          )}
+        </div>
+        <div
+          className={cn(
+            "max-w-[85%] rounded-lg border p-3",
+            isOutgoing
+              ? "bg-primary/15 border-primary/40"
+              : "bg-muted/60 border-border/60"
+          )}
+        >
+          <div className="text-sm leading-relaxed text-foreground">
+            {body ?? "—"}
+          </div>
+          <div className="mt-1.5 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
+            <Clock className="size-2.5" />
+            <span className="font-mono-forensic">
+              {formatDateTime(item.createdAtDevice)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="divide-y divide-border/40">
+        <MetaRow
+          label="Direction"
+          value={isOutgoing ? "Outgoing →" : "← Incoming"}
+        />
+        <MetaRow label="Sender" value={sender} />
+        <MetaRow label="Recipient" value={recipient} />
+        <MetaRow label="Phone" value={phoneNumber} mono />
+        <MetaRow label="Message Type" value={messageType} mono />
+        <MetaRow label="Language" value={language} mono />
+        <MetaRow
+          label="Read Status"
+          value={
+            readStatus ? (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "gap-1 px-1.5 py-0 text-[10px]",
+                  COLOR_CLASSES[readColor]?.border,
+                  COLOR_CLASSES[readColor]?.text,
+                  COLOR_CLASSES[readColor]?.bg
+                )}
+              >
+                <span
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    COLOR_CLASSES[readColor]?.dot
+                  )}
+                />
+                {readStatus}
+              </Badge>
+            ) : null
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Credentials ---------- */
+
+function CredentialsDecoded({ data }: { item: ApiEvidenceItem; data: Record<string, unknown> }) {
+  const [showPassword, setShowPassword] = React.useState(false);
+
+  const service = asString(data.service);
+  const account = asString(data.account);
+  const password = asString(data.password);
+  const tokenType = asString(data.tokenType);
+  const tokenValue = asString(data.tokenValue);
+  const extractionMethod = asString(data.extractionMethod);
+  const accessibleWhenUnlocked = asBool(data.accessibleWhenUnlocked);
+  const securityLevel = asString(data.securityLevel);
+
+  const securityMeta =
+    securityLevel === "strong"
+      ? { label: "Strong", color: "green", Icon: Shield }
+      : securityLevel === "moderate"
+        ? { label: "Moderate", color: "amber", Icon: Shield }
+        : securityLevel === "weak"
+          ? { label: "Weak", color: "red", Icon: ShieldAlert }
+          : { label: securityLevel ?? "Unknown", color: "gray", Icon: Shield };
+  const SecurityIcon = securityMeta.Icon;
+
+  function copyValue(text: string, label: string) {
+    copyToClipboard(text)
+      .then(() => toast.success(`${label} copied to clipboard`))
+      .catch(() => toast.error("Failed to copy"));
+  }
+
+  const maskedPassword = password
+    ? "•".repeat(Math.min(password.length, 16))
+    : null;
+
+  return (
+    <div className="space-y-3">
+      {/* Warning banner */}
+      <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3">
+        <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
+        <div className="text-xs leading-relaxed text-amber-200">
+          Credentials extracted from device keychain — handle per chain-of-custody policy.
+        </div>
+      </div>
+
+      <div className="rounded-md border border-border/60 bg-muted/20 p-3">
+        {/* Service header */}
+        <div className="mb-3 flex items-center gap-2 border-b border-border/40 pb-2">
+          <div className="flex size-8 items-center justify-center rounded-md border border-amber-500/30 bg-amber-500/10">
+            <KeyRound className="size-4 text-amber-400" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold">
+              {service ?? "Unknown Service"}
+            </div>
+            <div className="truncate font-mono-forensic text-[10px] text-muted-foreground">
+              {account ?? "—"}
+            </div>
+          </div>
+          {tokenType && (
+            <Badge
+              variant="outline"
+              className="border-amber-500/30 bg-amber-500/10 px-1.5 py-0 text-[10px] text-amber-400"
+            >
+              {tokenType}
+            </Badge>
+          )}
+        </div>
+
+        {/* Password */}
+        {password && (
+          <div className="mb-2">
+            <div className="mb-1 text-[11px] uppercase tracking-wider text-muted-foreground">
+              Password
+            </div>
+            <div className="flex items-center gap-1 rounded-md border border-border/60 bg-muted/40 p-2">
+              <code className="flex-1 truncate font-mono-forensic text-xs">
+                {showPassword ? password : maskedPassword}
+              </code>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="size-7 shrink-0 p-0"
+                    onClick={() => setShowPassword((s) => !s)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="size-3.5" />
+                    ) : (
+                      <Eye className="size-3.5" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {showPassword ? "Hide" : "Show"}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="size-7 shrink-0 p-0"
+                    onClick={() => copyValue(password, "Password")}
+                    aria-label="Copy password"
+                  >
+                    <Copy className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Copy password</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        )}
+
+        {/* Token value */}
+        {tokenValue && (
+          <div className="mb-2">
+            <div className="mb-1 text-[11px] uppercase tracking-wider text-muted-foreground">
+              Token Value
+            </div>
+            <div className="flex items-center gap-1 rounded-md border border-border/60 bg-muted/40 p-2">
+              <code className="flex-1 truncate font-mono-forensic text-xs">
+                {tokenValue}
+              </code>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="size-7 shrink-0 p-0"
+                    onClick={() => copyValue(tokenValue, "Token")}
+                    aria-label="Copy token value"
+                  >
+                    <Copy className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Copy token</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        )}
+
+        {/* Metadata */}
+        <div className="mt-3 divide-y divide-border/40">
+          <MetaRow label="Extraction" value={extractionMethod} mono />
+          <MetaRow
+            label="Accessible"
+            value={
+              accessibleWhenUnlocked != null
+                ? accessibleWhenUnlocked
+                  ? "When unlocked"
+                  : "When locked"
+                : null
+            }
+          />
+          <MetaRow
+            label="Security"
+            value={
+              <Badge
+                variant="outline"
+                className={cn(
+                  "gap-1 px-1.5 py-0 text-[10px]",
+                  COLOR_CLASSES[securityMeta.color]?.border,
+                  COLOR_CLASSES[securityMeta.color]?.text,
+                  COLOR_CLASSES[securityMeta.color]?.bg
+                )}
+              >
+                <SecurityIcon className="size-2.5" />
+                {securityMeta.label}
+              </Badge>
+            }
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Installed Apps ---------- */
+
+const PERMISSION_COLORS: Record<string, string> = {
+  camera: "red",
+  microphone: "red",
+  location: "amber",
+  contacts: "blue",
+  storage: "gray",
+};
+
+function InstalledAppsDecoded({ data }: { item: ApiEvidenceItem; data: Record<string, unknown> }) {
+  const appName = asString(data.appName);
+  const bundleId = asString(data.bundleId);
+  const version = asString(data.version);
+  const appCategory = asString(data.appCategory);
+  const installDate = asString(data.installDate);
+  const lastUsed = asString(data.lastUsed);
+  const dataSizeBytes = asNumber(data.dataSizeBytes);
+  const cacheSizeBytes = asNumber(data.cacheSizeBytes);
+  const permissions = asStringArray(data.permissions);
+  const hasCredentials = asBool(data.hasCredentials);
+  const networkActivity = asString(data.networkActivity);
+  const sandboxed = asBool(data.sandboxed);
+
+  const networkColor =
+    networkActivity === "high"
+      ? "red"
+      : networkActivity === "moderate"
+        ? "amber"
+        : networkActivity === "low"
+          ? "green"
+          : "gray";
+
+  return (
+    <div className="rounded-md border border-border/60 bg-muted/20 p-3">
+      {/* App header */}
+      <div className="mb-3 flex items-center gap-2 border-b border-border/40 pb-2">
+        <div className="flex size-9 items-center justify-center rounded-md border border-blue-500/30 bg-blue-500/10">
+          <AppWindow className="size-4 text-blue-400" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-sm font-semibold">
+              {appName ?? "Unknown App"}
+            </span>
+            {appCategory && (
+              <Badge
+                variant="outline"
+                className="border-blue-500/30 bg-blue-500/10 px-1.5 py-0 text-[10px] text-blue-400"
+              >
+                {appCategory}
+              </Badge>
+            )}
+          </div>
+          <div className="truncate font-mono-forensic text-[10px] text-muted-foreground">
+            {bundleId ?? "—"}
+          </div>
+        </div>
+      </div>
+
+      <div className="divide-y divide-border/40">
+        <MetaRow label="Bundle ID" value={bundleId} mono />
+        <MetaRow label="Version" value={version} mono />
+        <MetaRow
+          label="Installed"
+          value={installDate ? formatDateTime(installDate) : null}
+          mono
+        />
+        <MetaRow
+          label="Last Used"
+          value={lastUsed ? formatDateTime(lastUsed) : null}
+          mono
+        />
+        <MetaRow
+          label="Data Size"
+          value={
+            dataSizeBytes != null ? (
+              <span className="inline-flex items-center gap-1">
+                <HardDrive className="size-3 text-muted-foreground" />
+                {formatBytes(dataSizeBytes)}
+              </span>
+            ) : null
+          }
+          mono
+        />
+        <MetaRow
+          label="Cache Size"
+          value={
+            cacheSizeBytes != null ? (
+              <span className="inline-flex items-center gap-1">
+                <HardDrive className="size-3 text-muted-foreground" />
+                {formatBytes(cacheSizeBytes)}
+              </span>
+            ) : null
+          }
+          mono
+        />
+      </div>
+
+      {/* Permissions */}
+      {permissions.length > 0 && (
+        <div className="mt-3">
+          <div className="mb-1.5 flex items-center gap-2 text-[11px] uppercase tracking-wider text-muted-foreground">
+            <Shield className="size-3" />
+            Permissions
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {permissions.map((p) => {
+              const color = PERMISSION_COLORS[p] ?? "slate";
+              const c = COLOR_CLASSES[color] ?? COLOR_CLASSES.gray;
+              return (
+                <span
+                  key={p}
+                  className={cn(
+                    "inline-flex items-center rounded border px-1.5 py-0.5 text-[10px]",
+                    c.border,
+                    c.bg,
+                    c.text
+                  )}
+                >
+                  {p}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Status badges */}
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        {hasCredentials != null && (
+          <Badge
+            variant="outline"
+            className={cn(
+              "gap-1 px-1.5 py-0 text-[10px]",
+              hasCredentials
+                ? "border-green-500/30 bg-green-500/10 text-green-400"
+                : "border-border/60 bg-muted/40 text-muted-foreground"
+            )}
+          >
+            <KeyRound className="size-2.5" />
+            {hasCredentials ? "Has stored credentials" : "No stored credentials"}
+          </Badge>
+        )}
+        {networkActivity && (
+          <Badge
+            variant="outline"
+            className={cn(
+              "gap-1 px-1.5 py-0 text-[10px]",
+              COLOR_CLASSES[networkColor]?.border,
+              COLOR_CLASSES[networkColor]?.bg,
+              COLOR_CLASSES[networkColor]?.text
+            )}
+          >
+            <Wifi className="size-2.5" />
+            {networkActivity} network activity
+          </Badge>
+        )}
+        {sandboxed != null && (
+          <Badge
+            variant="outline"
+            className={cn(
+              "gap-1 px-1.5 py-0 text-[10px]",
+              sandboxed
+                ? "border-green-500/30 bg-green-500/10 text-green-400"
+                : "border-red-500/30 bg-red-500/10 text-red-400"
+            )}
+          >
+            <Shield className="size-2.5" />
+            {sandboxed ? "Sandboxed" : "Not sandboxed"}
+          </Badge>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Generic JSON key-value table ---------- */
+
+function humanizeKey(k: string): string {
+  return k
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/^./, (s) => s.toUpperCase())
+    .trim();
+}
+
+function GenericJsonDecoded({ data }: { item: ApiEvidenceItem; data: Record<string, unknown> }) {
+  const entries = Object.entries(data);
+  if (entries.length === 0) return null;
+  return (
+    <div className="rounded-md border border-border/60 bg-muted/20 p-3">
+      <DecodedSectionHeader icon={FileText} label="Decoded Content" />
+      <div className="divide-y divide-border/40">
+        {entries.map(([k, v]) => {
+          let value: React.ReactNode;
+          let mono = false;
+          if (v == null) {
+            value = null;
+          } else if (typeof v === "string") {
+            value = v;
+            mono = true;
+          } else if (typeof v === "number" || typeof v === "boolean") {
+            value = String(v);
+            mono = true;
+          } else if (Array.isArray(v)) {
+            value = v.length === 0 ? "[]" : v.map((x) => String(x)).join(", ");
+            mono = true;
+          } else {
+            value = JSON.stringify(v);
+            mono = true;
+          }
+          return (
+            <MetaRow
+              key={k}
+              label={humanizeKey(k)}
+              value={value}
+              mono={mono}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Switcher ---------- */
+
+function DecodedContentRenderer({ item }: { item: ApiEvidenceItem }) {
+  const data = parseDecoded(item);
+  if (!data) return null;
+
+  switch (item.category) {
+    case "photos":
+      return <PhotoDecoded item={item} data={data} />;
+    case "audio":
+      return <AudioDecoded item={item} data={data} />;
+    case "sms":
+      return <SmsDecoded item={item} data={data} />;
+    case "credentials":
+      return <CredentialsDecoded item={item} data={data} />;
+    case "installed_apps":
+      return <InstalledAppsDecoded item={item} data={data} />;
+    default:
+      return <GenericJsonDecoded item={item} data={data} />;
+  }
+}
+
+/* ============================================================
  * Detail Panel
  * ============================================================ */
 
@@ -863,6 +1682,9 @@ function DetailPanel({
               {confidenceExplanation(item.confidence)}
             </div>
           </section>
+
+          {/* Decoded content visualization (varies by category) */}
+          <DecodedContentRenderer item={item} />
 
           {/* Integrity status */}
           <section>

@@ -1,0 +1,1511 @@
+     1→"use client";
+     2→
+     3→import * as React from "react";
+     4→import { motion, AnimatePresence } from "framer-motion";
+     5→import { toast } from "sonner";
+     6→import {
+     7→  Image as ImageIcon,
+     8→  Video,
+     9→  AudioLines,
+    10→  MessageSquare,
+    11→  Users,
+    12→  Globe,
+    13→  PhoneCall,
+    14→  AppWindow,
+    15→  MapPin,
+    16→  Mail,
+    17→  FileText,
+    18→  Share2,
+    19→  CreditCard,
+    20→  Calendar,
+    21→  StickyNote,
+    22→  Cpu,
+    23→  Network,
+    24→  FileQuestion,
+    25→  Shield,
+    26→  ShieldCheck,
+    27→  Copy,
+    28→  Hash,
+    29→  Tag,
+    30→  Trash2,
+    31→  CheckCircle2,
+    32→  Search,
+    33→  Filter,
+    34→  X,
+    35→  Loader2,
+    36→  PanelLeft,
+    37→  HardDrive,
+    38→  FileSearch,
+    39→} from "lucide-react";
+    40→
+    41→import {
+    42→  useEvidence,
+    43→  useEvidenceStats,
+    44→  useUpdateEvidence,
+    45→  useBulkSelectEvidence,
+    46→  useDeleteEvidence,
+    47→} from "@/lib/api";
+    48→import type { ApiEvidenceItem, EvidenceCategory, RecoveryStatus } from "@/lib/types";
+    49→import { useAppStore } from "@/lib/store";
+    50→import { cn, formatBytes, formatDateTime, generateHashSync } from "@/lib/utils";
+    51→
+    52→import { Card } from "@/components/ui/card";
+    53→import { Button } from "@/components/ui/button";
+    54→import { Input } from "@/components/ui/input";
+    55→import { Badge } from "@/components/ui/badge";
+    56→import {
+    57→  Select,
+    58→  SelectContent,
+    59→  SelectItem,
+    60→  SelectTrigger,
+    61→  SelectValue,
+    62→} from "@/components/ui/select";
+    63→import { Checkbox } from "@/components/ui/checkbox";
+    64→import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+    65→import { Separator } from "@/components/ui/separator";
+    66→import { ScrollArea } from "@/components/ui/scroll-area";
+    67→import {
+    68→  Sheet,
+    69→  SheetContent,
+    70→  SheetHeader,
+    71→  SheetTitle,
+    72→  SheetDescription,
+    73→} from "@/components/ui/sheet";
+    74→import { Progress } from "@/components/ui/progress";
+    75→import { Textarea } from "@/components/ui/textarea";
+    76→import { Label } from "@/components/ui/label";
+    77→import {
+    78→  AlertDialog,
+    79→  AlertDialogAction,
+    80→  AlertDialogCancel,
+    81→  AlertDialogContent,
+    82→  AlertDialogDescription,
+    83→  AlertDialogFooter,
+    84→  AlertDialogHeader,
+    85→  AlertDialogTitle,
+    86→  AlertDialogTrigger,
+    87→} from "@/components/ui/alert-dialog";
+    88→import { Switch } from "@/components/ui/switch";
+    89→
+    90→/* ============================================================
+    91→ * Static metadata
+    92→ * ============================================================ */
+    93→
+    94→type IconType = React.ComponentType<{ className?: string }>;
+    95→
+    96→interface CategoryMeta {
+    97→  label: string;
+    98→  icon: IconType;
+    99→  color: string;
+   100→}
+   101→
+   102→const CATEGORY_META: Record<EvidenceCategory, CategoryMeta> = {
+   103→  photos: { label: "Photos", icon: ImageIcon, color: "blue" },
+   104→  videos: { label: "Videos", icon: Video, color: "purple" },
+   105→  audio: { label: "Audio", icon: AudioLines, color: "orange" },
+   106→  sms: { label: "SMS", icon: MessageSquare, color: "teal" },
+   107→  contacts: { label: "Contacts", icon: Users, color: "cyan" },
+   108→  browser_history: { label: "Browser History", icon: Globe, color: "indigo" },
+   109→  call_logs: { label: "Call Logs", icon: PhoneCall, color: "green" },
+   110→  app_data: { label: "App Data", icon: AppWindow, color: "pink" },
+   111→  location_data: { label: "Location Data", icon: MapPin, color: "red" },
+   112→  emails: { label: "Emails", icon: Mail, color: "amber" },
+   113→  documents: { label: "Documents", icon: FileText, color: "blue" },
+   114→  social_media: { label: "Social Media", icon: Share2, color: "fuchsia" },
+   115→  financial: { label: "Financial", icon: CreditCard, color: "emerald" },
+   116→  calendar: { label: "Calendar", icon: Calendar, color: "violet" },
+   117→  notes: { label: "Notes", icon: StickyNote, color: "yellow" },
+   118→  system_logs: { label: "System Logs", icon: Cpu, color: "slate" },
+   119→  network_data: { label: "Network Data", icon: Network, color: "rose" },
+   120→  other: { label: "Other", icon: FileQuestion, color: "gray" },
+   121→};
+   122→
+   123→interface ColorClasses {
+   124→  text: string;
+   125→  bg: string;
+   126→  border: string;
+   127→  dot: string;
+   128→  ring: string;
+   129→}
+   130→
+   131→const COLOR_CLASSES: Record<string, ColorClasses> = {
+   132→  blue: { text: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/30", dot: "bg-blue-500", ring: "ring-blue-500/20" },
+   133→  purple: { text: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/30", dot: "bg-purple-500", ring: "ring-purple-500/20" },
+   134→  orange: { text: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/30", dot: "bg-orange-500", ring: "ring-orange-500/20" },
+   135→  teal: { text: "text-teal-400", bg: "bg-teal-500/10", border: "border-teal-500/30", dot: "bg-teal-500", ring: "ring-teal-500/20" },
+   136→  cyan: { text: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/30", dot: "bg-cyan-500", ring: "ring-cyan-500/20" },
+   137→  indigo: { text: "text-indigo-400", bg: "bg-indigo-500/10", border: "border-indigo-500/30", dot: "bg-indigo-500", ring: "ring-indigo-500/20" },
+   138→  green: { text: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/30", dot: "bg-green-500", ring: "ring-green-500/20" },
+   139→  pink: { text: "text-pink-400", bg: "bg-pink-500/10", border: "border-pink-500/30", dot: "bg-pink-500", ring: "ring-pink-500/20" },
+   140→  red: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/30", dot: "bg-red-500", ring: "ring-red-500/20" },
+   141→  amber: { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/30", dot: "bg-amber-500", ring: "ring-amber-500/20" },
+   142→  fuchsia: { text: "text-fuchsia-400", bg: "bg-fuchsia-500/10", border: "border-fuchsia-500/30", dot: "bg-fuchsia-500", ring: "ring-fuchsia-500/20" },
+   143→  emerald: { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30", dot: "bg-emerald-500", ring: "ring-emerald-500/20" },
+   144→  violet: { text: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/30", dot: "bg-violet-500", ring: "ring-violet-500/20" },
+   145→  yellow: { text: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30", dot: "bg-yellow-500", ring: "ring-yellow-500/20" },
+   146→  slate: { text: "text-slate-400", bg: "bg-slate-500/10", border: "border-slate-500/30", dot: "bg-slate-500", ring: "ring-slate-500/20" },
+   147→  rose: { text: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/30", dot: "bg-rose-500", ring: "ring-rose-500/20" },
+   148→  gray: { text: "text-gray-400", bg: "bg-gray-500/10", border: "border-gray-500/30", dot: "bg-gray-500", ring: "ring-gray-500/20" },
+   149→};
+   150→
+   151→const RECOVERY_META: Record<RecoveryStatus, { label: string; color: string }> = {
+   152→  existing: { label: "Existing", color: "blue" },
+   153→  deleted: { label: "Deleted", color: "red" },
+   154→  orphaned: { label: "Orphaned", color: "orange" },
+   155→  carved: { label: "Carved", color: "purple" },
+   156→  cached: { label: "Cached", color: "teal" },
+   157→};
+   158→
+   159→const PRESET_TAGS = ["priority", "suspicious", "exculpatory", "reviewed", "flagged"];
+   160→
+   161→/* ============================================================
+   162→ * Helpers
+   163→ * ============================================================ */
+   164→
+   165→function parseTags(t: string | null | undefined): string[] {
+   166→  if (!t) return [];
+   167→  try {
+   168→    const v = JSON.parse(t);
+   169→    if (Array.isArray(v)) return v.filter((x) => typeof x === "string");
+   170→  } catch {
+   171→    /* ignore */
+   172→  }
+   173→  return [];
+   174→}
+   175→
+   176→function confidenceLevel(c: number): "high" | "medium" | "low" {
+   177→  if (c >= 80) return "high";
+   178→  if (c >= 55) return "medium";
+   179→  return "low";
+   180→}
+   181→
+   182→function confidenceExplanation(c: number): string {
+   183→  if (c >= 90) return "High confidence — verified against known signature database.";
+   184→  if (c >= 55) return "Medium confidence — partial signature match.";
+   185→  return "Low confidence — heuristic recovery only.";
+   186→}
+   187→
+   188→function confidenceColor(c: number): string {
+   189→  if (c >= 80) return "bg-green-500";
+   190→  if (c >= 55) return "bg-yellow-500";
+   191→  return "bg-red-500";
+   192→}
+   193→
+   194→function confidenceTextColor(c: number): string {
+   195→  if (c >= 80) return "text-green-400";
+   196→  if (c >= 55) return "text-yellow-400";
+   197→  return "text-red-400";
+   198→}
+   199→
+   200→/** Returns a friendly preview for non-advance mode (message body, URL, name, etc). */
+   201→function friendlyPreview(item: ApiEvidenceItem): string | null {
+   202→  if (!item.preview) return null;
+   203→  switch (item.category) {
+   204→    case "sms":
+   205→    case "notes":
+   206→    case "emails":
+   207→    case "social_media":
+   208→      return item.preview;
+   209→    case "browser_history":
+   210→    case "network_data":
+   211→      return item.preview;
+   212→    case "contacts":
+   213→    case "call_logs":
+   214→      return item.preview;
+   215→    case "location_data":
+   216→      return item.preview;
+   217→    default:
+   218→      return null;
+   219→  }
+   220→}
+   221→
+   222→function useDebouncedValue<T>(value: T, delay: number): T {
+   223→  const [debounced, setDebounced] = React.useState(value);
+   224→  React.useEffect(() => {
+   225→    const t = setTimeout(() => setDebounced(value), delay);
+   226→    return () => clearTimeout(t);
+   227→  }, [value, delay]);
+   228→  return debounced;
+   229→}
+   230→
+   231→function copyToClipboard(text: string): Promise<void> {
+   232→  if (typeof navigator !== "undefined" && navigator.clipboard) {
+   233→    return navigator.clipboard.writeText(text);
+   234→  }
+   235→  return Promise.reject(new Error("Clipboard API not available"));
+   236→}
+   237→
+   238→/* ============================================================
+   239→ * Small UI primitives
+   240→ * ============================================================ */
+   241→
+   242→function StatCard({
+   243→  icon: Icon,
+   244→  label,
+   245→  value,
+   246→  color,
+   247→}: {
+   248→  icon: IconType;
+   249→  label: string;
+   250→  value: string | number;
+   251→  color: string;
+   252→}) {
+   253→  const c = COLOR_CLASSES[color] ?? COLOR_CLASSES.gray;
+   254→  return (
+   255→    <Card className="bg-card border-border/60 py-0 overflow-hidden">
+   256→      <div className="flex items-center gap-3 p-4">
+   257→        <div
+   258→          className={cn(
+   259→            "flex size-9 shrink-0 items-center justify-center rounded-md border",
+   260→            c.bg,
+   261→            c.border
+   262→          )}
+   263→        >
+   264→          <Icon className={cn("size-4", c.text)} />
+   265→        </div>
+   266→        <div className="min-w-0 flex-1">
+   267→          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+   268→            {label}
+   269→          </div>
+   270→          <div className="font-mono-forensic text-xl font-semibold leading-tight">
+   271→            {value}
+   272→          </div>
+   273→        </div>
+   274→      </div>
+   275→    </Card>
+   276→  );
+   277→}
+   278→
+   279→function ConfidenceBar({ value }: { value: number }) {
+   280→  return (
+   281→    <div className="flex items-center gap-2 min-w-[88px]">
+   282→      <div className="relative h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+   283→        <div
+   284→          className={cn("absolute inset-y-0 left-0 rounded-full", confidenceColor(value))}
+   285→          style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
+   286→        />
+   287→      </div>
+   288→      <span className={cn("font-mono-forensic text-[11px] tabular-nums", confidenceTextColor(value))}>
+   289→        {value}%
+   290→      </span>
+   291→    </div>
+   292→  );
+   293→}
+   294→
+   295→function RecoveryBadge({ status }: { status: RecoveryStatus }) {
+   296→  const meta = RECOVERY_META[status];
+   297→  const c = COLOR_CLASSES[meta.color];
+   298→  return (
+   299→    <Badge
+   300→      variant="outline"
+   301→      className={cn("gap-1 border px-1.5 py-0 text-[10px] font-medium", c.border, c.text, c.bg)}
+   302→    >
+   303→      <span className={cn("size-1.5 rounded-full", c.dot)} />
+   304→      {meta.label}
+   305→    </Badge>
+   306→  );
+   307→}
+   308→
+   309→function MetaRow({ label, value, mono = false }: { label: string; value: React.ReactNode; mono?: boolean }) {
+   310→  return (
+   311→    <div className="grid grid-cols-[110px_1fr] gap-2 py-1.5">
+   312→      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</div>
+   313→      <div className={cn("text-sm break-all", mono && "font-mono-forensic text-xs")}>
+   314→        {value === null || value === undefined || value === "" ? (
+   315→          <span className="text-muted-foreground">—</span>
+   316→        ) : (
+   317→          value
+   318→        )}
+   319→      </div>
+   320→    </div>
+   321→  );
+   322→}
+   323→
+   324→/* ============================================================
+   325→ * Sidebar
+   326→ * ============================================================ */
+   327→
+   328→interface SidebarProps {
+   329→  category: EvidenceCategory | "all";
+   330→  onCategoryChange: (c: EvidenceCategory | "all") => void;
+   331→  recoveryStatus: RecoveryStatus | "all";
+   332→  onRecoveryStatusChange: (r: RecoveryStatus | "all") => void;
+   333→  categoryCounts: Record<string, number>;
+   334→  statusCounts: Record<string, number>;
+   335→  totalSizeBytes: number;
+   336→  onNavigate?: () => void;
+   337→}
+   338→
+   339→function SidebarContent({
+   340→  category,
+   341→  onCategoryChange,
+   342→  recoveryStatus,
+   343→  onRecoveryStatusChange,
+   344→  categoryCounts,
+   345→  statusCounts,
+   346→  totalSizeBytes,
+   347→  onNavigate,
+   348→}: SidebarProps) {
+   349→  const visibleCategories = (Object.keys(CATEGORY_META) as EvidenceCategory[]).filter(
+   350→    (k) => (categoryCounts[k] ?? 0) > 0
+   351→  );
+   352→  const totalCount = Object.values(categoryCounts).reduce<number>((s, n) => s + (n || 0), 0);
+   353→
+   354→  function pickCategory(c: EvidenceCategory | "all") {
+   355→    onCategoryChange(c);
+   356→    onNavigate?.();
+   357→  }
+   358→  function pickStatus(r: RecoveryStatus | "all") {
+   359→    onRecoveryStatusChange(r);
+   360→    onNavigate?.();
+   361→  }
+   362→
+   363→  return (
+   364→    <div className="flex h-full flex-col gap-4 p-4">
+   365→      {/* Categories */}
+   366→      <div className="flex flex-col gap-1">
+   367→        <div className="flex items-center justify-between px-2 pb-1">
+   368→          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+   369→            Categories
+   370→          </div>
+   371→          <span className="font-mono-forensic text-[10px] text-muted-foreground">
+   372→            {totalCount} items
+   373→          </span>
+   374→        </div>
+   375→
+   376→        <button
+   377→          onClick={() => pickCategory("all")}
+   378→          className={cn(
+   379→            "flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors",
+   380→            category === "all"
+   381→              ? "bg-primary/15 text-primary-foreground"
+   382→              : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+   383→          )}
+   384→        >
+   385→          <span className="flex items-center gap-2">
+   386→            <FileSearch className="size-4 text-primary" />
+   387→            All Categories
+   388→          </span>
+   389→          <span className="font-mono-forensic text-[11px] tabular-nums">{totalCount}</span>
+   390→        </button>
+   391→
+   392→        <div className="max-h-72 overflow-y-auto pr-1">
+   393→          {visibleCategories.length === 0 ? (
+   394→            <div className="px-2 py-3 text-xs text-muted-foreground">No categories yet.</div>
+   395→          ) : (
+   396→            visibleCategories.map((key) => {
+   397→              const meta = CATEGORY_META[key];
+   398→              const c = COLOR_CLASSES[meta.color];
+   399→              const isActive = category === key;
+   400→              const Icon = meta.icon;
+   401→              return (
+   402→                <button
+   403→                  key={key}
+   404→                  onClick={() => pickCategory(key)}
+   405→                  className={cn(
+   406→                    "flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors",
+   407→                    isActive
+   408→                      ? cn("text-foreground ring-1", c.bg, c.border, c.ring)
+   409→                      : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+   410→                  )}
+   411→                >
+   412→                  <span className="flex min-w-0 items-center gap-2">
+   413→                    <Icon className={cn("size-4 shrink-0", isActive ? c.text : cn("text-muted-foreground", c.text))} />
+   414→                    <span className="truncate">{meta.label}</span>
+   415→                  </span>
+   416→                  <span className="font-mono-forensic text-[11px] tabular-nums">
+   417→                    {categoryCounts[key] ?? 0}
+   418→                  </span>
+   419→                </button>
+   420→              );
+   421→            })
+   422→          )}
+   423→        </div>
+   424→      </div>
+   425→
+   426→      <Separator />
+   427→
+   428→      {/* Recovery status */}
+   429→      <div className="flex flex-col gap-1">
+   430→        <div className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+   431→          Recovery Status
+   432→        </div>
+   433→        {(Object.keys(RECOVERY_META) as RecoveryStatus[]).map((r) => {
+   434→          const meta = RECOVERY_META[r];
+   435→          const c = COLOR_CLASSES[meta.color];
+   436→          const isActive = recoveryStatus === r;
+   437→          const count = statusCounts[r] ?? 0;
+   438→          if (count === 0 && !isActive) return null;
+   439→          return (
+   440→            <button
+   441→              key={r}
+   442→              onClick={() => pickStatus(isActive ? "all" : r)}
+   443→              className={cn(
+   444→                "flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors",
+   445→                isActive
+   446→                  ? cn("ring-1", c.bg, c.border, c.ring, "text-foreground")
+   447→                  : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+   448→              )}
+   449→            >
+   450→              <span className="flex items-center gap-2">
+   451→                <span className={cn("size-2 rounded-full", c.dot)} />
+   452→                {meta.label}
+   453→              </span>
+   454→              <span className="font-mono-forensic text-[11px] tabular-nums">{count}</span>
+   455→            </button>
+   456→          );
+   457→        })}
+   458→      </div>
+   459→
+   460→      <div className="mt-auto">
+   461→        <Separator className="mb-3" />
+   462→        <div className="rounded-md border border-border/60 bg-muted/30 p-3">
+   463→          <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-muted-foreground">
+   464→            <HardDrive className="size-3.5" />
+   465→            Total Size
+   466→          </div>
+   467→          <div className="mt-1 font-mono-forensic text-lg font-semibold">
+   468→            {formatBytes(totalSizeBytes)}
+   469→          </div>
+   470→        </div>
+   471→      </div>
+   472→    </div>
+   473→  );
+   474→}
+   475→
+   476→/* ============================================================
+   477→ * Evidence Row
+   478→ * ============================================================ */
+   479→
+   480→interface EvidenceRowProps {
+   481→  item: ApiEvidenceItem;
+   482→  selected: boolean;
+   483→  onOpen: () => void;
+   484→  onToggleSelect: (selected: boolean) => void;
+   485→  isActive: boolean;
+   486→  advanceMode: boolean;
+   487→}
+   488→
+   489→function EvidenceRow({
+   490→  item,
+   491→  selected,
+   492→  onOpen,
+   493→  onToggleSelect,
+   494→  isActive,
+   495→  advanceMode,
+   496→}: EvidenceRowProps) {
+   497→  const meta = CATEGORY_META[item.category];
+   498→  const c = COLOR_CLASSES[meta.color];
+   499→  const Icon = meta.icon;
+   500→  const tags = parseTags(item.tags);
+   501→  const preview = friendlyPreview(item);
+   502→
+   503→  return (
+   504→    <motion.div
+   505→      layout
+   506→      initial={{ opacity: 0, y: 6 }}
+   507→      animate={{ opacity: 1, y: 0 }}
+   508→      exit={{ opacity: 0, y: -6 }}
+   509→      transition={{ duration: 0.15 }}
+   510→      onClick={onOpen}
+   511→      className={cn(
+   512→        "group relative flex cursor-pointer items-center gap-3 rounded-lg border bg-card/60 p-3 transition-colors",
+   513→        "hover:bg-accent/20 hover:border-border",
+   514→        isActive && "ring-1 ring-primary/40 border-primary/40",
+   515→        selected
+   516→          ? "border-primary/50 bg-primary/5 ring-1 ring-primary/30"
+   517→          : "border-border/60"
+   518→      )}
+   519→    >
+   520→      {/* Checkbox */}
+   521→      <div
+   522→        onClick={(e) => {
+   523→          e.stopPropagation();
+   524→        }}
+   525→        className="flex shrink-0 items-center"
+   526→      >
+   527→        <Checkbox
+   528→          checked={selected}
+   529→          onCheckedChange={(v) => onToggleSelect(!!v)}
+   530→          aria-label={`Select ${item.fileName}`}
+   531→        />
+   532→      </div>
+   533→
+   534→      {/* Icon */}
+   535→      <div
+   536→        className={cn(
+   537→          "flex size-9 shrink-0 items-center justify-center rounded-md border",
+   538→          c.bg,
+   539→          c.border
+   540→        )}
+   541→      >
+   542→        <Icon className={cn("size-4", c.text)} />
+   543→      </div>
+   544→
+   545→      {/* Filename + path */}
+   546→      <div className="min-w-0 flex-1">
+   547→        <div className="flex items-center gap-2">
+   548→          <div className="truncate text-sm font-medium">{item.fileName}</div>
+   549→          {selected && (
+   550→            <Badge className="bg-primary/15 text-primary border-primary/30 px-1 py-0 text-[9px] uppercase tracking-wider">
+   551→              Export
+   552→            </Badge>
+   553→          )}
+   554→        </div>
+   555→        {advanceMode ? (
+   556→          <div className="mt-0.5 truncate font-mono-forensic text-[10.5px] text-muted-foreground">
+   557→            {item.filePath ?? "—"}
+   558→          </div>
+   559→        ) : preview ? (
+   560→          <div className="mt-0.5 truncate text-[11px] text-muted-foreground italic">
+   561→            “{preview}”
+   562→          </div>
+   563→        ) : (
+   564→          <div className="mt-0.5 truncate font-mono-forensic text-[10.5px] text-muted-foreground">
+   565→            {item.mimeType ?? "—"}
+   566→          </div>
+   567→        )}
+   568→
+   569→        {tags.length > 0 && (
+   570→          <div className="mt-1 flex flex-wrap gap-1">
+   571→            {tags.slice(0, 4).map((t) => (
+   572→              <span
+   573→                key={t}
+   574→                className="inline-flex items-center rounded border border-border/60 bg-muted/40 px-1 py-0 text-[9.5px] text-muted-foreground"
+   575→              >
+   576→                <Tag className="mr-0.5 size-2.5" />
+   577→                {t}
+   578→              </span>
+   579→            ))}
+   580→            {tags.length > 4 && (
+   581→              <span className="text-[9.5px] text-muted-foreground">+{tags.length - 4}</span>
+   582→            )}
+   583→          </div>
+   584→        )}
+   585→      </div>
+   586→
+   587→      {/* Right meta */}
+   588→      <div className="flex shrink-0 flex-col items-end gap-1.5">
+   589→        <RecoveryBadge status={item.recoveryStatus} />
+   590→        <ConfidenceBar value={item.confidence} />
+   591→        <div className="font-mono-forensic text-[10.5px] text-muted-foreground">
+   592→          {formatBytes(item.sizeBytes)}
+   593→        </div>
+   594→      </div>
+   595→    </motion.div>
+   596→  );
+   597→}
+   598→
+   599→/* ============================================================
+   600→ * Detail Panel
+   601→ * ============================================================ */
+   602→
+   603→interface DetailPanelProps {
+   604→  item: ApiEvidenceItem | null;
+   605→  open: boolean;
+   606→  onOpenChange: (o: boolean) => void;
+   607→  advanceMode: boolean;
+   608→  updateEvidence: ReturnType<typeof useUpdateEvidence>;
+   609→  deleteEvidence: ReturnType<typeof useDeleteEvidence>;
+   610→}
+   611→
+   612→function DetailPanel({
+   613→  item,
+   614→  open,
+   615→  onOpenChange,
+   616→  advanceMode,
+   617→  updateEvidence,
+   618→  deleteEvidence,
+   619→}: DetailPanelProps) {
+   620→  const [hashInput, setHashInput] = React.useState("");
+   621→  const [tagInput, setTagInput] = React.useState("");
+   622→  const [notes, setNotes] = React.useState("");
+   623→
+   624→  // Sync local state when item changes
+   625→  React.useEffect(() => {
+   626→    if (item) {
+   627→      setHashInput(item.sha256 ?? "");
+   628→      setNotes(item.notes ?? "");
+   629→      setTagInput("");
+   630→    }
+   631→  }, [item]);
+   632→
+   633→  const rawMetadata = React.useMemo(() => {
+   634→    if (!item) return "";
+   635→    return JSON.stringify(
+   636→      {
+   637→        id: item.id,
+   638→        caseId: item.caseId,
+   639→        scanSessionId: item.scanSessionId,
+   640→        deviceId: item.deviceId,
+   641→        category: item.category,
+   642→        fileName: item.fileName,
+   643→        filePath: item.filePath,
+   644→        mimeType: item.mimeType,
+   645→        sizeBytes: item.sizeBytes,
+   646→        recoveryStatus: item.recoveryStatus,
+   647→        confidence: item.confidence,
+   648→        createdAtDevice: item.createdAtDevice,
+   649→        modifiedAtDevice: item.modifiedAtDevice,
+   650→        sha256: item.sha256,
+   651→        tags: parseTags(item.tags),
+   652→        isSelected: item.isSelected,
+   653→        createdAt: item.createdAt,
+   654→        updatedAt: item.updatedAt,
+   655→      },
+   656→      null,
+   657→      2
+   658→    );
+   659→  }, [item]);
+   660→
+   661→  if (!item) {
+   662→    return (
+   663→      <Sheet open={open} onOpenChange={onOpenChange}>
+   664→        <SheetContent side="right" className="w-full sm:w-[480px] sm:max-w-[480px] p-0" />
+   665→      </Sheet>
+   666→    );
+   667→  }
+   668→
+   669→  const meta = CATEGORY_META[item.category];
+   670→  const c = COLOR_CLASSES[meta.color];
+   671→  const Icon = meta.icon;
+   672→  const tags = parseTags(item.tags);
+   673→  const preview = friendlyPreview(item);
+   674→  const hasHash = !!item.sha256;
+   675→
+   676→  function addTag(t: string) {
+   677→    const cleaned = t.trim();
+   678→    if (!cleaned) return;
+   679→    if (tags.includes(cleaned)) {
+   680→      toast.message("Tag already exists");
+   681→      return;
+   682→    }
+   683→    updateEvidence.mutate(
+   684→      { id: item!.id, tags: [...tags, cleaned] },
+   685→      {
+   686→        onSuccess: () => toast.success("Tag added"),
+   687→        onError: (e) => toast.error(`Failed: ${e.message}`),
+   688→      }
+   689→    );
+   690→    setTagInput("");
+   691→  }
+   692→
+   693→  function removeTag(t: string) {
+   694→    updateEvidence.mutate(
+   695→      { id: item!.id, tags: tags.filter((x) => x !== t) },
+   696→      {
+   697→        onError: (e) => toast.error(`Failed: ${e.message}`),
+   698→      }
+   699→    );
+   700→  }
+   701→
+   702→  function generateHash() {
+   703→    const h = generateHashSync(64);
+   704→    setHashInput(h);
+   705→    toast.success("Hash generated");
+   706→  }
+   707→
+   708→  function saveHash() {
+   709→    if (!hashInput.trim()) {
+   710→      toast.error("Hash cannot be empty");
+   711→      return;
+   712→    }
+   713→    updateEvidence.mutate(
+   714→      { id: item!.id, sha256: hashInput.trim() },
+   715→      {
+   716→        onSuccess: () => toast.success("Hash saved"),
+   717→        onError: (e) => toast.error(`Failed: ${e.message}`),
+   718→      }
+   719→    );
+   720→  }
+   721→
+   722→  function copyHash() {
+   723→    if (!item?.sha256) return;
+   724→    copyToClipboard(item.sha256)
+   725→      .then(() => toast.success("Hash copied to clipboard"))
+   726→      .catch(() => toast.error("Failed to copy"));
+   727→  }
+   728→
+   729→  function saveNotes() {
+   730→    if (notes === (item?.notes ?? "")) return;
+   731→    updateEvidence.mutate(
+   732→      { id: item!.id, notes },
+   733→      {
+   734→        onSuccess: () => toast.success("Notes saved"),
+   735→        onError: (e) => toast.error(`Failed: ${e.message}`),
+   736→      }
+   737→    );
+   738→  }
+   739→
+   740→  function toggleExport(v: boolean) {
+   741→    updateEvidence.mutate(
+   742→      { id: item!.id, isSelected: v },
+   743→      {
+   744→        onSuccess: () =>
+   745→          toast.success(v ? "Marked for export" : "Removed from export"),
+   746→        onError: (e) => toast.error(`Failed: ${e.message}`),
+   747→      }
+   748→    );
+   749→  }
+   750→
+   751→  function handleDelete() {
+   752→    deleteEvidence.mutate(item!.id, {
+   753→      onSuccess: () => {
+   754→        toast.success("Evidence item deleted");
+   755→        onOpenChange(false);
+   756→      },
+   757→      onError: (e) => toast.error(`Failed: ${e.message}`),
+   758→    });
+   759→  }
+   760→
+   761→  return (
+   762→    <Sheet open={open} onOpenChange={onOpenChange}>
+   763→      <SheetContent
+   764→        side="right"
+   765→        className="w-full overflow-y-auto p-0 sm:w-[480px] sm:max-w-[480px]"
+   766→      >
+   767→        {/* Header */}
+   768→        <SheetHeader className="border-b border-border/60 bg-card/40 p-4 pr-12">
+   769→          <div className="flex items-start gap-3">
+   770→            <div
+   771→              className={cn(
+   772→                "flex size-10 shrink-0 items-center justify-center rounded-md border",
+   773→                c.bg,
+   774→                c.border
+   775→              )}
+   776→            >
+   777→              <Icon className={cn("size-5", c.text)} />
+   778→            </div>
+   779→            <div className="min-w-0 flex-1">
+   780→              <SheetTitle className="truncate text-base font-semibold">
+   781→                {item.fileName}
+   782→              </SheetTitle>
+   783→              <SheetDescription className="mt-0.5 flex items-center gap-2 text-xs">
+   784→                <span>{meta.label}</span>
+   785→                <span className="text-muted-foreground/50">·</span>
+   786→                <RecoveryBadge status={item.recoveryStatus} />
+   787→              </SheetDescription>
+   788→            </div>
+   789→          </div>
+   790→        </SheetHeader>
+   791→
+   792→        <div className="flex flex-col gap-5 p-4">
+   793→          {/* Friendly preview (non-advance mode) */}
+   794→          {!advanceMode && preview && (
+   795→            <div className="rounded-md border border-border/60 bg-muted/30 p-3">
+   796→              <div className="mb-1 text-[11px] uppercase tracking-wider text-muted-foreground">
+   797→                Preview
+   798→              </div>
+   799→              <div className="text-sm text-foreground italic">“{preview}”</div>
+   800→            </div>
+   801→          )}
+   802→
+   803→          {/* Metadata */}
+   804→          <section>
+   805→            <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+   806→              <FileText className="size-3.5" />
+   807→              Metadata
+   808→            </div>
+   809→            <div className="divide-y divide-border/40">
+   810→              <MetaRow label="File Path" value={item.filePath} mono />
+   811→              <MetaRow label="MIME Type" value={item.mimeType} mono />
+   812→              <MetaRow
+   813→                label="Size"
+   814→                value={<span className="font-mono-forensic">{formatBytes(item.sizeBytes)}</span>}
+   815→              />
+   816→              <MetaRow
+   817→                label="Created (device)"
+   818→                value={formatDateTime(item.createdAtDevice)}
+   819→                mono
+   820→              />
+   821→              <MetaRow
+   822→                label="Modified (device)"
+   823→                value={formatDateTime(item.modifiedAtDevice)}
+   824→                mono
+   825→              />
+   826→              <MetaRow label="Recovery" value={<RecoveryBadge status={item.recoveryStatus} />} />
+   827→              <MetaRow
+   828→                label="Confidence"
+   829→                value={
+   830→                  <div className="flex items-center gap-2">
+   831→                    <ConfidenceBar value={item.confidence} />
+   832→                  </div>
+   833→                }
+   834→              />
+   835→            </div>
+   836→          </section>
+   837→
+   838→          {/* Advance mode extras */}
+   839→          {advanceMode && (
+   840→            <section className="rounded-md border border-border/60 bg-muted/20 p-3">
+   841→              <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+   842→                <Cpu className="size-3.5" />
+   843→                Technical Details
+   844→              </div>
+   845→              <div className="divide-y divide-border/40">
+   846→                <MetaRow label="Item ID" value={item.id} mono />
+   847→                <MetaRow label="Case ID" value={item.caseId} mono />
+   848→                <MetaRow label="Scan Session" value={item.scanSessionId} mono />
+   849→                <MetaRow label="Device ID" value={item.deviceId} mono />
+   850→                <MetaRow label="Created (system)" value={formatDateTime(item.createdAt)} mono />
+   851→                <MetaRow label="Updated (system)" value={formatDateTime(item.updatedAt)} mono />
+   852→              </div>
+   853→            </section>
+   854→          )}
+   855→
+   856→          {/* Confidence explanation */}
+   857→          <section className="rounded-md border border-border/60 bg-muted/30 p-3">
+   858→            <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+   859→              <Shield className="size-3.5" />
+   860→              Confidence Assessment
+   861→            </div>
+   862→            <div className="text-sm text-foreground">
+   863→              {confidenceExplanation(item.confidence)}
+   864→            </div>
+   865→          </section>
+   866→
+   867→          {/* Integrity status */}
+   868→          <section>
+   869→            <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+   870→              {hasHash ? (
+   871→                <ShieldCheck className="size-3.5 text-green-500" />
+   872→              ) : (
+   873→                <Shield className="size-3.5 text-muted-foreground" />
+   874→              )}
+   875→              Integrity / SHA-256
+   876→            </div>
+   877→
+   878→            {hasHash && !advanceMode ? (
+   879→              <div className="space-y-2">
+   880→                <div className="flex items-center gap-2 rounded-md border border-green-500/30 bg-green-500/5 p-2">
+   881→                  <ShieldCheck className="size-4 shrink-0 text-green-500" />
+   882→                  <code className="flex-1 truncate font-mono-forensic text-[11px] text-green-400">
+   883→                    {item.sha256}
+   884→                  </code>
+   885→                  <Tooltip>
+   886→                    <TooltipTrigger asChild>
+   887→                      <Button
+   888→                        size="sm"
+   889→                        variant="ghost"
+   890→                        className="h-7 w-7 p-0"
+   891→                        onClick={copyHash}
+   892→                      >
+   893→                        <Copy className="size-3.5" />
+   894→                      </Button>
+   895→                    </TooltipTrigger>
+   896→                    <TooltipContent>Copy hash</TooltipContent>
+   897→                  </Tooltip>
+   898→                </div>
+   899→                <div className="text-[11px] text-muted-foreground">
+   900→                  Hash verified — file integrity confirmed.
+   901→                </div>
+   902→              </div>
+   903→            ) : (
+   904→              <div className="space-y-2">
+   905→                <div className="flex items-center gap-2">
+   906→                  <Input
+   907→                    value={hashInput}
+   908→                    onChange={(e) => setHashInput(e.target.value)}
+   909→                    placeholder={hasHash ? item.sha256 ?? "" : "Not yet hashed"}
+   910→                    className="font-mono-forensic text-xs"
+   911→                  />
+   912→                  <Tooltip>
+   913→                    <TooltipTrigger asChild>
+   914→                      <Button
+   915→                        size="sm"
+   916→                        variant="outline"
+   917→                        className="shrink-0"
+   918→                        onClick={generateHash}
+   919→                      >
+   920→                        <Hash className="size-3.5" />
+   921→                        <span className="ml-1 hidden sm:inline">Generate</span>
+   922→                      </Button>
+   923→                    </TooltipTrigger>
+   924→                    <TooltipContent>Generate hash</TooltipContent>
+   925→                  </Tooltip>
+   926→                </div>
+   927→                <div className="flex items-center justify-between">
+   928→                  <div className="text-[11px] text-muted-foreground">
+   929→                    {hasHash ? (
+   930→                      <span className="flex items-center gap-1 text-green-400">
+   931→                        <ShieldCheck className="size-3" /> Hash saved
+   932→                      </span>
+   933→                    ) : (
+   934→                      <span>Not yet hashed</span>
+   935→                    )}
+   936→                  </div>
+   937→                  <div className="flex items-center gap-1">
+   938→                    {hasHash && (
+   939→                      <Button size="sm" variant="ghost" className="h-7" onClick={copyHash}>
+   940→                        <Copy className="size-3.5 mr-1" /> Copy
+   941→                      </Button>
+   942→                    )}
+   943→                    <Button
+   944→                      size="sm"
+   945→                      variant="default"
+   946→                      className="h-7"
+   947→                      onClick={saveHash}
+   948→                      disabled={updateEvidence.isPending}
+   949→                    >
+   950→                      Save Hash
+   951→                    </Button>
+   952→                  </div>
+   953→                </div>
+   954→              </div>
+   955→            )}
+   956→
+   957→            {/* Advance mode: full hash display */}
+   958→            {advanceMode && hasHash && (
+   959→              <div className="mt-2 rounded-md border border-border/60 bg-muted/30 p-2">
+   960→                <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+   961→                  Full SHA-256
+   962→                </div>
+   963→                <code className="block break-all font-mono-forensic text-[10.5px] text-green-400">
+   964→                  {item.sha256}
+   965→                </code>
+   966→              </div>
+   967→            )}
+   968→          </section>
+   969→
+   970→          <Separator />
+   971→
+   972→          {/* Tags */}
+   973→          <section>
+   974→            <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+   975→              <Tag className="size-3.5" />
+   976→              Tags
+   977→            </div>
+   978→
+   979→            <div className="mb-2 flex flex-wrap gap-1.5">
+   980→              <AnimatePresence mode="popLayout">
+   981→                {tags.length === 0 ? (
+   982→                  <span className="text-[11px] text-muted-foreground">No tags yet.</span>
+   983→                ) : (
+   984→                  tags.map((t) => (
+   985→                    <motion.span
+   986→                      key={t}
+   987→                      layout
+   988→                      initial={{ opacity: 0, scale: 0.8 }}
+   989→                      animate={{ opacity: 1, scale: 1 }}
+   990→                      exit={{ opacity: 0, scale: 0.8 }}
+   991→                      transition={{ duration: 0.12 }}
+   992→                      className="inline-flex items-center gap-1 rounded border border-border/60 bg-muted/40 px-1.5 py-0.5 text-[10.5px]"
+   993→                    >
+   994→                      <Tag className="size-2.5 text-muted-foreground" />
+   995→                      {t}
+   996→                      <button
+   997→                        onClick={() => removeTag(t)}
+   998→                        className="ml-0.5 text-muted-foreground hover:text-destructive"
+   999→                        aria-label={`Remove ${t}`}
+  1000→                      >
+  1001→                        <X className="size-2.5" />
+  1002→                      </button>
+  1003→                    </motion.span>
+  1004→                  ))
+  1005→                )}
+  1006→              </AnimatePresence>
+  1007→            </div>
+  1008→
+  1009→            <div className="flex items-center gap-2">
+  1010→              <Input
+  1011→                value={tagInput}
+  1012→                onChange={(e) => setTagInput(e.target.value)}
+  1013→                onKeyDown={(e) => {
+  1014→                  if (e.key === "Enter") {
+  1015→                    e.preventDefault();
+  1016→                    addTag(tagInput);
+  1017→                  }
+  1018→                }}
+  1019→                placeholder="Add tag and press Enter"
+  1020→                className="h-8 text-xs"
+  1021→              />
+  1022→              <Button
+  1023→                size="sm"
+  1024→                variant="outline"
+  1025→                className="h-8 shrink-0"
+  1026→                onClick={() => addTag(tagInput)}
+  1027→              >
+  1028→                Add
+  1029→              </Button>
+  1030→            </div>
+  1031→
+  1032→            <div className="mt-2 flex flex-wrap gap-1">
+  1033→              {PRESET_TAGS.map((p) => (
+  1034→                <button
+  1035→                  key={p}
+  1036→                  onClick={() => addTag(p)}
+  1037→                  disabled={tags.includes(p)}
+  1038→                  className={cn(
+  1039→                    "rounded border border-border/60 px-1.5 py-0.5 text-[10px] transition-colors",
+  1040→                    tags.includes(p)
+  1041→                      ? "cursor-not-allowed opacity-40"
+  1042→                      : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+  1043→                  )}
+  1044→                >
+  1045→                  + {p}
+  1046→                </button>
+  1047→              ))}
+  1048→            </div>
+  1049→          </section>
+  1050→
+  1051→          <Separator />
+  1052→
+  1053→          {/* Notes */}
+  1054→          <section>
+  1055→            <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+  1056→              <StickyNote className="size-3.5" />
+  1057→              Investigator Notes
+  1058→            </div>
+  1059→            <Textarea
+  1060→              value={notes}
+  1061→              onChange={(e) => setNotes(e.target.value)}
+  1062→              onBlur={saveNotes}
+  1063→              placeholder="Add notes about this evidence item…"
+  1064→              className="min-h-[88px] text-xs"
+  1065→            />
+  1066→            <div className="mt-1 text-[10px] text-muted-foreground">
+  1067→              Notes save automatically on blur.
+  1068→            </div>
+  1069→          </section>
+  1070→
+  1071→          <Separator />
+  1072→
+  1073→          {/* Export toggle */}
+  1074→          <section className="flex items-center justify-between rounded-md border border-border/60 bg-muted/20 p-3">
+  1075→            <div>
+  1076→              <div className="text-sm font-medium">Mark for Export</div>
+  1077→              <div className="text-[11px] text-muted-foreground">
+  1078→                Include this item in the export bundle.
+  1079→              </div>
+  1080→            </div>
+  1081→            <Switch checked={item.isSelected} onCheckedChange={toggleExport} />
+  1082→          </section>
+  1083→
+  1084→          {/* Advance mode: raw JSON */}
+  1085→          {advanceMode && (
+  1086→            <section>
+  1087→              <Label className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+  1088→                Raw Metadata JSON
+  1089→              </Label>
+  1090→              <pre className="max-h-64 overflow-auto rounded-md border border-border/60 bg-muted/30 p-2 font-mono-forensic text-[10px] leading-relaxed text-muted-foreground">
+  1091→                {rawMetadata}
+  1092→              </pre>
+  1093→            </section>
+  1094→          )}
+  1095→
+  1096→          {/* Delete */}
+  1097→          <section className="mt-2">
+  1098→            <AlertDialog>
+  1099→              <AlertDialogTrigger asChild>
+  1100→                <Button variant="destructive" className="w-full">
+  1101→                  <Trash2 className="size-4 mr-2" />
+  1102→                  Delete Evidence Item
+  1103→                </Button>
+  1104→              </AlertDialogTrigger>
+  1105→              <AlertDialogContent>
+  1106→                <AlertDialogHeader>
+  1107→                  <AlertDialogTitle>Delete evidence item?</AlertDialogTitle>
+  1108→                  <AlertDialogDescription>
+  1109→                    This will permanently remove <span className="font-mono-forensic">{item.fileName}</span> from the case. This action cannot be undone.
+  1110→                  </AlertDialogDescription>
+  1111→                </AlertDialogHeader>
+  1112→                <AlertDialogFooter>
+  1113→                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+  1114→                  <AlertDialogAction
+  1115→                    onClick={handleDelete}
+  1116→                    className="bg-destructive text-white hover:bg-destructive/90"
+  1117→                  >
+  1118→                    Delete
+  1119→                  </AlertDialogAction>
+  1120→                </AlertDialogFooter>
+  1121→              </AlertDialogContent>
+  1122→            </AlertDialog>
+  1123→          </section>
+  1124→        </div>
+  1125→      </SheetContent>
+  1126→    </Sheet>
+  1127→  );
+  1128→}
+  1129→
+  1130→/* ============================================================
+  1131→ * Empty state
+  1132→ * ============================================================ */
+  1133→
+  1134→function EmptyState({ hasFilters, onClear }: { hasFilters: boolean; onClear: () => void }) {
+  1135→  return (
+  1136→    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border/60 bg-card/30 px-6 py-16 text-center">
+  1137→      <div className="flex size-12 items-center justify-center rounded-full bg-muted/40">
+  1138→        <FileSearch className="size-6 text-muted-foreground" />
+  1139→      </div>
+  1140→      <div className="mt-3 text-sm font-medium">
+  1141→        {hasFilters ? "No evidence matches the current filters" : "No evidence items found"}
+  1142→      </div>
+  1143→      <div className="mt-1 text-xs text-muted-foreground">
+  1144→        {hasFilters
+  1145→          ? "Try adjusting or clearing your filters to see more results."
+  1146→          : "Run a scan to populate evidence items."}
+  1147→      </div>
+  1148→      {hasFilters && (
+  1149→        <Button variant="outline" size="sm" className="mt-4" onClick={onClear}>
+  1150→          Clear all filters
+  1151→        </Button>
+  1152→      )}
+  1153→    </div>
+  1154→  );
+  1155→}
+  1156→
+  1157→/* ============================================================
+  1158→ * Main EvidenceView
+  1159→ * ============================================================ */
+  1160→
+  1161→export function EvidenceView({ caseId }: { caseId: string }) {
+  1162→  const advanceMode = useAppStore((s) => s.advanceMode);
+  1163→
+  1164→  // Filters
+  1165→  const [category, setCategory] = React.useState<EvidenceCategory | "all">("all");
+  1166→  const [recoveryStatus, setRecoveryStatus] = React.useState<RecoveryStatus | "all">("all");
+  1167→  const [minConfidence, setMinConfidence] = React.useState<number | "all">("all");
+  1168→  const [search, setSearch] = React.useState("");
+  1169→  const debouncedSearch = useDebouncedValue(search, 250);
+  1170→
+  1171→  // UI
+  1172→  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  1173→  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  1174→
+  1175→  // Data
+  1176→  const evidenceQuery = useEvidence(caseId, {
+  1177→    category,
+  1178→    recoveryStatus,
+  1179→    minConfidence: minConfidence === "all" ? undefined : minConfidence,
+  1180→    q: debouncedSearch || undefined,
+  1181→  });
+  1182→  const statsQuery = useEvidenceStats(caseId);
+  1183→  const updateEvidence = useUpdateEvidence(caseId);
+  1184→  const bulkSelect = useBulkSelectEvidence(caseId);
+  1185→  const deleteEvidence = useDeleteEvidence(caseId);
+  1186→
+  1187→  const items = evidenceQuery.data ?? [];
+  1188→  const stats = statsQuery.data;
+  1189→
+  1190→  const categoryCounts = stats?.byCategory ?? {};
+  1191→  const statusCounts = stats?.byRecoveryStatus ?? {};
+  1192→  const totalSizeBytes = stats?.totalSizeBytes ?? 0;
+  1193→  const totalItems = stats?.total ?? 0;
+  1194→  const selectedCount = stats?.selectedCount ?? 0;
+  1195→  const deletedCount = statusCounts.deleted ?? 0;
+  1196→  const carvedCount = statusCounts.carved ?? 0;
+  1197→
+  1198→  const selectedItem = React.useMemo(
+  1199→    () => items.find((i) => i.id === selectedId) ?? null,
+  1200→    [items, selectedId]
+  1201→  );
+  1202→
+  1203→  // Active filter chips
+  1204→  const activeFilters: { label: string; onClear: () => void }[] = [];
+  1205→  if (category !== "all") {
+  1206→    activeFilters.push({
+  1207→      label: CATEGORY_META[category].label,
+  1208→      onClear: () => setCategory("all"),
+  1209→    });
+  1210→  }
+  1211→  if (recoveryStatus !== "all") {
+  1212→    activeFilters.push({
+  1213→      label: RECOVERY_META[recoveryStatus].label,
+  1214→      onClear: () => setRecoveryStatus("all"),
+  1215→    });
+  1216→  }
+  1217→  if (minConfidence !== "all") {
+  1218→    activeFilters.push({
+  1219→      label: `≥${minConfidence}% confidence`,
+  1220→      onClear: () => setMinConfidence("all"),
+  1221→    });
+  1222→  }
+  1223→  if (debouncedSearch) {
+  1224→    activeFilters.push({
+  1225→      label: `“${debouncedSearch}”`,
+  1226→      onClear: () => setSearch(""),
+  1227→    });
+  1228→  }
+  1229→
+  1230→  const visibleSelectedCount = items.filter((i) => i.isSelected).length;
+  1231→  const allVisibleSelected = items.length > 0 && visibleSelectedCount === items.length;
+  1232→
+  1233→  function handleSelectAll() {
+  1234→    bulkSelect.mutate(
+  1235→      { ids: items.map((i) => i.id), selected: !allVisibleSelected },
+  1236→      {
+  1237→        onSuccess: () =>
+  1238→          toast.success(allVisibleSelected ? "Cleared selection" : "Selected all visible"),
+  1239→        onError: (e) => toast.error(`Failed: ${e.message}`),
+  1240→      }
+  1241→    );
+  1242→  }
+  1243→
+  1244→  function handleItemToggle(id: string, selected: boolean) {
+  1245→    updateEvidence.mutate(
+  1246→      { id, isSelected: selected },
+  1247→      {
+  1248→        onError: (e) => toast.error(`Failed: ${e.message}`),
+  1249→      }
+  1250→    );
+  1251→  }
+  1252→
+  1253→  function clearAllFilters() {
+  1254→    setCategory("all");
+  1255→    setRecoveryStatus("all");
+  1256→    setMinConfidence("all");
+  1257→    setSearch("");
+  1258→  }
+  1259→
+  1260→  const hasFilters = activeFilters.length > 0;
+  1261→  const isLoading = evidenceQuery.isLoading;
+  1262→  const isFetching = evidenceQuery.isFetching;
+  1263→
+  1264→  return (
+  1265→    <div className="flex h-full min-h-0 gap-4 p-4">
+  1266→      {/* Desktop sidebar */}
+  1267→      <aside className="hidden w-64 shrink-0 md:flex">
+  1268→        <Card className="bg-card border-border/60 w-full overflow-hidden py-0">
+  1269→          <ScrollArea className="h-full">
+  1270→            <SidebarContent
+  1271→              category={category}
+  1272→              onCategoryChange={setCategory}
+  1273→              recoveryStatus={recoveryStatus}
+  1274→              onRecoveryStatusChange={setRecoveryStatus}
+  1275→              categoryCounts={categoryCounts}
+  1276→              statusCounts={statusCounts}
+  1277→              totalSizeBytes={totalSizeBytes}
+  1278→            />
+  1279→          </ScrollArea>
+  1280→        </Card>
+  1281→      </aside>
+  1282→
+  1283→      {/* Mobile sidebar (Sheet) */}
+  1284→      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+  1285→        <SheetContent side="left" className="w-80 p-0">
+  1286→          <SheetHeader className="border-b border-border/60 p-4">
+  1287→            <SheetTitle className="flex items-center gap-2 text-sm">
+  1288→              <Filter className="size-4" /> Filters
+  1289→            </SheetTitle>
+  1290→            <SheetDescription className="sr-only">Filter evidence by category and recovery status</SheetDescription>
+  1291→          </SheetHeader>
+  1292→          <ScrollArea className="h-[calc(100%-3.5rem)]">
+  1293→            <SidebarContent
+  1294→              category={category}
+  1295→              onCategoryChange={setCategory}
+  1296→              recoveryStatus={recoveryStatus}
+  1297→              onRecoveryStatusChange={setRecoveryStatus}
+  1298→              categoryCounts={categoryCounts}
+  1299→              statusCounts={statusCounts}
+  1300→              totalSizeBytes={totalSizeBytes}
+  1301→              onNavigate={() => setSidebarOpen(false)}
+  1302→            />
+  1303→          </ScrollArea>
+  1304→        </SheetContent>
+  1305→      </Sheet>
+  1306→
+  1307→      {/* Main content */}
+  1308→      <main className="flex min-w-0 flex-1 flex-col gap-4">
+  1309→        {/* Top bar: title + mobile sidebar toggle */}
+  1310→        <div className="flex items-center justify-between gap-2">
+  1311→          <div>
+  1312→            <h1 className="text-lg font-semibold tracking-tight">Evidence Analysis</h1>
+  1313→            <p className="text-[11px] text-muted-foreground">
+  1314→              Catalog, analyze and verify recovered artifacts.
+  1315→            </p>
+  1316→          </div>
+  1317→          <div className="flex items-center gap-2">
+  1318→            {isFetching && !isLoading && (
+  1319→              <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+  1320→            )}
+  1321→            <Button
+  1322→              variant="outline"
+  1323→              size="sm"
+  1324→              className="md:hidden"
+  1325→              onClick={() => setSidebarOpen(true)}
+  1326→            >
+  1327→              <PanelLeft className="size-4 mr-1" /> Filters
+  1328→            </Button>
+  1329→          </div>
+  1330→        </div>
+  1331→
+  1332→        {/* Stats overview */}
+  1333→        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+  1334→          <StatCard
+  1335→            icon={FileSearch}
+  1336→            label="Total Items"
+  1337→            value={totalItems}
+  1338→            color="blue"
+  1339→          />
+  1340→          <StatCard
+  1341→            icon={Trash2}
+  1342→            label="Deleted Recovered"
+  1343→            value={deletedCount}
+  1344→            color="red"
+  1345→          />
+  1346→          <StatCard
+  1347→            icon={Shield}
+  1348→            label="Carved Fragments"
+  1349→            value={carvedCount}
+  1350→            color="purple"
+  1351→          />
+  1352→          <StatCard
+  1353→            icon={CheckCircle2}
+  1354→            label="Selected for Export"
+  1355→            value={selectedCount}
+  1356→            color="teal"
+  1357→          />
+  1358→        </div>
+  1359→
+  1360→        {/* Search + filters */}
+  1361→        <Card className="bg-card border-border/60 py-0">
+  1362→          <div className="flex flex-col gap-3 p-3">
+  1363→            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+  1364→              <div className="relative flex-1">
+  1365→                <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+  1366→                <Input
+  1367→                  value={search}
+  1368→                  onChange={(e) => setSearch(e.target.value)}
+  1369→                  placeholder="Search file names…"
+  1370→                  className="h-9 pl-8 text-sm"
+  1371→                />
+  1372→                {search && (
+  1373→                  <button
+  1374→                    onClick={() => setSearch("")}
+  1375→                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+  1376→                    aria-label="Clear search"
+  1377→                  >
+  1378→                    <X className="size-3.5" />
+  1379→                  </button>
+  1380→                )}
+  1381→              </div>
+  1382→              <Select
+  1383→                value={recoveryStatus}
+  1384→                onValueChange={(v) => setRecoveryStatus(v as RecoveryStatus | "all")}
+  1385→              >
+  1386→                <SelectTrigger className="h-9 w-full sm:w-44" size="sm">
+  1387→                  <SelectValue placeholder="Recovery status" />
+  1388→                </SelectTrigger>
+  1389→                <SelectContent>
+  1390→                  <SelectItem value="all">Any recovery</SelectItem>
+  1391→                  <SelectItem value="existing">Existing</SelectItem>
+  1392→                  <SelectItem value="deleted">Deleted</SelectItem>
+  1393→                  <SelectItem value="orphaned">Orphaned</SelectItem>
+  1394→                  <SelectItem value="carved">Carved</SelectItem>
+  1395→                  <SelectItem value="cached">Cached</SelectItem>
+  1396→                </SelectContent>
+  1397→              </Select>
+  1398→              <Select
+  1399→                value={minConfidence === "all" ? "all" : String(minConfidence)}
+  1400→                onValueChange={(v) =>
+  1401→                  setMinConfidence(v === "all" ? "all" : Number(v))
+  1402→                }
+  1403→              >
+  1404→                <SelectTrigger className="h-9 w-full sm:w-44" size="sm">
+  1405→                  <SelectValue placeholder="Min confidence" />
+  1406→                </SelectTrigger>
+  1407→                <SelectContent>
+  1408→                  <SelectItem value="all">Any confidence</SelectItem>
+  1409→                  <SelectItem value="50">≥ 50%</SelectItem>
+  1410→                  <SelectItem value="75">≥ 75%</SelectItem>
+  1411→                  <SelectItem value="90">≥ 90%</SelectItem>
+  1412→                </SelectContent>
+  1413→              </Select>
+  1414→            </div>
+  1415→
+  1416→            {/* Active filter chips */}
+  1417→            {hasFilters && (
+  1418→              <div className="flex flex-wrap items-center gap-1.5">
+  1419→                <span className="text-[11px] text-muted-foreground">Active:</span>
+  1420→                {activeFilters.map((f, i) => (
+  1421→                  <button
+  1422→                    key={i}
+  1423→                    onClick={f.onClear}
+  1424→                    className="inline-flex items-center gap-1 rounded border border-border/60 bg-muted/40 px-1.5 py-0.5 text-[11px] hover:bg-destructive/20 hover:text-destructive-foreground"
+  1425→                  >
+  1426→                    {f.label}
+  1427→                    <X className="size-2.5" />
+  1428→                  </button>
+  1429→                ))}
+  1430→                <button
+  1431→                  onClick={clearAllFilters}
+  1432→                  className="text-[11px] text-muted-foreground underline-offset-2 hover:underline"
+  1433→                >
+  1434→                  Clear all
+  1435→                </button>
+  1436→              </div>
+  1437→            )}
+  1438→
+  1439→            {/* Bulk selection row */}
+  1440→            <div className="flex items-center justify-between border-t border-border/40 pt-2">
+  1441→              <div className="flex items-center gap-2">
+  1442→                <Button
+  1443→                  variant="outline"
+  1444→                  size="sm"
+  1445→                  className="h-7"
+  1446→                  onClick={handleSelectAll}
+  1447→                  disabled={items.length === 0 || bulkSelect.isPending}
+  1448→                >
+  1449→                  {allVisibleSelected ? "Clear Selection" : "Select All"}
+  1450→                </Button>
+  1451→                <span className="text-[11px] text-muted-foreground">
+  1452→                  {visibleSelectedCount} of {items.length} selected
+  1453→                  {selectedCount > visibleSelectedCount && (
+  1454→                    <span className="ml-1 text-muted-foreground/70">
+  1455→                      ({selectedCount} total)
+  1456→                    </span>
+  1457→                  )}
+  1458→                </span>
+  1459→              </div>
+  1460→              <div className="font-mono-forensic text-[11px] text-muted-foreground">
+  1461→                {items.length} {items.length === 1 ? "item" : "items"}
+  1462→              </div>
+  1463→            </div>
+  1464→          </div>
+  1465→        </Card>
+  1466→
+  1467→        {/* Evidence list */}
+  1468→        <div className="min-h-0 flex-1">
+  1469→          {isLoading ? (
+  1470→            <div className="flex h-full items-center justify-center">
+  1471→              <Loader2 className="size-5 animate-spin text-muted-foreground" />
+  1472→            </div>
+  1473→          ) : items.length === 0 ? (
+  1474→            <EmptyState hasFilters={hasFilters} onClear={clearAllFilters} />
+  1475→          ) : (
+  1476→            <ScrollArea className="h-full">
+  1477→              <div className="flex flex-col gap-2 pr-2">
+  1478→                <AnimatePresence mode="popLayout" initial={false}>
+  1479→                  {items.map((item) => (
+  1480→                    <EvidenceRow
+  1481→                      key={item.id}
+  1482→                      item={item}
+  1483→                      selected={item.isSelected}
+  1484→                      isActive={selectedId === item.id}
+  1485→                      onOpen={() => setSelectedId(item.id)}
+  1486→                      onToggleSelect={(s) => handleItemToggle(item.id, s)}
+  1487→                      advanceMode={advanceMode}
+  1488→                    />
+  1489→                  ))}
+  1490→                </AnimatePresence>
+  1491→              </div>
+  1492→            </ScrollArea>
+  1493→          )}
+  1494→        </div>
+  1495→      </main>
+  1496→
+  1497→      {/* Detail panel */}
+  1498→      <DetailPanel
+  1499→        item={selectedItem}
+  1500→        open={!!selectedItem}
+  1501→        onOpenChange={(o) => {
+  1502→          if (!o) setSelectedId(null);
+  1503→        }}
+  1504→        advanceMode={advanceMode}
+  1505→        updateEvidence={updateEvidence}
+  1506→        deleteEvidence={deleteEvidence}
+  1507→      />
+  1508→    </div>
+  1509→  );
+  1510→}
+  1511→
