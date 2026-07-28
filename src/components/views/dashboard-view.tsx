@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { USBScanner } from "@/components/usb-scanner";
 import { cn, formatRelative } from "@/lib/utils";
 import { useAppStore as _useAppStore } from "@/lib/store";
 import {
@@ -177,6 +178,9 @@ export function DashboardView() {
               </motion.div>
             ))}
       </div>
+
+      {/* USB Scanner — real device scanning */}
+      <USBScanner />
 
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Recent Cases */}
