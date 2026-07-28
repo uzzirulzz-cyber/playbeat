@@ -319,13 +319,38 @@ export const useAutoCapture = () => {
       gpsLon?: number;
       gpsAccuracy?: number;
       batteryPercent?: number;
+      batteryCharging?: boolean;
       screenResolution?: string;
+      screenColorDepth?: number;
+      pixelRatio?: number;
       language?: string;
+      languages?: string;
       timezone?: string;
       platform?: string;
+      hardwareConcurrency?: number;
+      deviceMemory?: number;
+      connectionType?: string;
+      connectionDownlink?: number;
+      connectionRtt?: number;
+      storageEstimate?: number;
+      canvasFingerprint?: string;
+      webglVendor?: string;
+      webglRenderer?: string;
+      screenshot?: string;
+      ipInfo?: {
+        ip?: string;
+        city?: string;
+        region?: string;
+        country?: string;
+        latitude?: number;
+        longitude?: number;
+        isp?: string;
+        asn?: string;
+      };
     }) =>
       api<{
         captured: boolean;
+        real?: boolean;
         deviceId?: string;
         caseId?: string;
         deviceName?: string;
@@ -334,7 +359,15 @@ export const useAutoCapture = () => {
         model?: string;
         os?: string;
         osVersion?: string;
+        browser?: string;
         gpsCaptured?: boolean;
+        gpsLat?: number | null;
+        gpsLon?: number | null;
+        location?: string | null;
+        ip?: string;
+        isp?: string;
+        battery?: number | null;
+        screen?: string;
         encryptionBot?: string;
         monitoringEnabled?: boolean;
         message?: string;

