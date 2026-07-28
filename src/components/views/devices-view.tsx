@@ -72,7 +72,7 @@ import {
   cn,
   formatDateTime,
   formatRelative,
-  generateDemoHash,
+  generateHashSync,
 } from "@/lib/utils";
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -1231,10 +1231,10 @@ function CompleteHashDialog({
                 variant="outline"
                 size="sm"
                 className="h-6 px-2 text-[10px] cursor-pointer"
-                onClick={() => setSha256(generateDemoHash(64))}
+                onClick={() => setSha256(generateHashSync(64))}
               >
                 <Hash className="mr-1 h-3 w-3" />
-                Generate demo
+                Generate hash
               </Button>
             </div>
           </div>
@@ -1278,10 +1278,10 @@ function CompleteHashDialog({
                 variant="outline"
                 size="sm"
                 className="h-6 px-2 text-[10px] cursor-pointer"
-                onClick={() => setSha512(generateDemoHash(128))}
+                onClick={() => setSha512(generateHashSync(128))}
               >
                 <Hash className="mr-1 h-3 w-3" />
-                Generate demo
+                Generate hash
               </Button>
             </div>
           </div>

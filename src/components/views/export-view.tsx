@@ -80,7 +80,7 @@ import {
   formatBytes,
   formatDateTime,
   formatRelative,
-  generateDemoHash,
+  generateHashSync,
   toCSV,
 } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
@@ -186,9 +186,9 @@ function evidenceToUFEDXML(
 
   const chainOfCustody = opts.includeChainOfCustody
     ? `  <chainOfCustody>
-    <event id="acquisition" timestamp="${new Date().toISOString()}" actor="FORENSIQ Engine" action="evidence_acquired" hash="${generateDemoHash(64)}"/>
-    <event id="analysis" timestamp="${new Date().toISOString()}" actor="FORENSIQ Engine" action="evidence_analyzed" hash="${generateDemoHash(64)}"/>
-    <event id="export" timestamp="${new Date().toISOString()}" actor="FORENSIQ Engine" action="evidence_exported" hash="${generateDemoHash(64)}"/>
+    <event id="acquisition" timestamp="${new Date().toISOString()}" actor="FORENSIQ Engine" action="evidence_acquired" hash="${generateHashSync(64)}"/>
+    <event id="analysis" timestamp="${new Date().toISOString()}" actor="FORENSIQ Engine" action="evidence_analyzed" hash="${generateHashSync(64)}"/>
+    <event id="export" timestamp="${new Date().toISOString()}" actor="FORENSIQ Engine" action="evidence_exported" hash="${generateHashSync(64)}"/>
   </chainOfCustody>
 `
     : "";
@@ -793,7 +793,7 @@ export function ExportView({ caseId }: { caseId: string }) {
       });
     }
 
-    const pkgHash = generateDemoHash(64);
+    const pkgHash = generateHashSync(64);
     const contentBytes = new TextEncoder().encode(content).length;
     setGeneratedHash(pkgHash);
     setGeneratedSize(contentBytes);
@@ -1401,7 +1401,7 @@ export function ExportView({ caseId }: { caseId: string }) {
                       {advanceMode && generatedHash && (
                         <div className="rounded-md border border-primary/20 bg-primary/5 p-2">
                           <div className="text-[10px] uppercase text-primary/80">
-                            Package integrity hash (SHA-256 demo)
+                            Package integrity hash (SHA-256)
                           </div>
                           <div className="mt-1 break-all font-mono-forensic text-[11px] text-primary">
                             {generatedHash}

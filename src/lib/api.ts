@@ -72,6 +72,7 @@ export const useActivate = () => {
       licenseType?: "standard" | "professional" | "enterprise";
       email: string;
       name: string;
+      password?: string;
     }) => api<{ user: ApiUser; organization: { id: string; name: string; licenseType: string } }>("/api/activate", {
       method: "POST",
       body: JSON.stringify(body),
@@ -83,8 +84,20 @@ export const useActivate = () => {
 export const useSignIn = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { email: string; name?: string }) =>
+    mutationFn: (body: { email: string; password: string }) =>
       api<{ user: ApiUser; organization: { id: string; name: string; licenseType: string } | null }>("/api/sign-in", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["session"] }),
+  });
+};
+
+export const useSignUp = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { name: string; email: string; password: string }) =>
+      api<{ user: ApiUser; organization: { id: string; name: string; licenseType: string } | null }>("/api/sign-up", {
         method: "POST",
         body: JSON.stringify(body),
       }),
@@ -111,6 +124,22 @@ export const useUpdateProfile = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["session"] }),
   });
 };
+
+export const useOrganization = () =>
+  useQuery({
+    queryKey: ["organization"],
+    queryFn: () =>
+      api<{
+        id: string;
+        name: string;
+        licenseKey: string;
+        licenseType: string;
+        maxUsers: number;
+        activatedAt: string;
+        expiresAt: string | null;
+      }>("/api/organization"),
+    retry: false,
+  });
 
 /* ====== Cases ====== */
 export const useCases = () =>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, useTeam, useUpdateTeamMember } from "@/lib/api";
+import { useSession, useTeam, useUpdateTeamMember, useOrganization } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -139,27 +139,34 @@ export function AdminView() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Select
-                      value={u.role}
-                      onValueChange={async (v) => {
-                        try {
-                          await update.mutateAsync({ id: u.id, role: v });
-                          toast.success(`${u.name} is now ${v}`);
-                        } catch (e) {
-                          toast.error((e as Error).message);
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="h-7 w-[120px] text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="investigator">Investigator</SelectItem>
-                        <SelectItem value="reviewer">Reviewer</SelectItem>
-                        <SelectItem value="viewer">Viewer</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {u.role === "admin" ? (
+                      <div className="h-7 w-[120px] flex items-center justify-center text-xs font-medium text-destructive border border-destructive/30 rounded-md bg-destructive/10">
+                        Admin
+                      </div>
+                    ) : (
+                      <Select
+                        value={u.role}
+                        onValueChange={async (v) => {
+                          try {
+                            await update.mutateAsync({ id: u.id, role: v });
+                            toast.success(`${u.name} is now ${v}`);
+                          } catch (e) {
+                            toast.error((e as Error).message);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-7 w-[120px] text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {/* Admin role is intentionally excluded — the platform
+                              enforces a single admin (the first registered user). */}
+                          <SelectItem value="investigator">Investigator</SelectItem>
+                          <SelectItem value="reviewer">Reviewer</SelectItem>
+                          <SelectItem value="viewer">Viewer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -236,25 +243,17 @@ export function AdminView() {
         </Dialog>
       )}
 
-      {/* Invite dialog (demo only) */}
+      {/* Invite dialog — shows the real org license key for sharing */}
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Invite Team Member</DialogTitle>
             <DialogDescription>
-              Share your license key with a colleague. They can use it to join your organization from the activation screen.
+              Share your organization's license key with a colleague. They can register a new account and join your organization from the activation screen.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <div className="rounded-md bg-muted/40 p-3">
-              <div className="text-[10px] font-mono-forensic uppercase tracking-wider text-muted-foreground">Your license key</div>
-              <div className="text-sm font-mono-forensic mt-1 break-all">
-                {team && team.length > 0 ? "FORENSIQ-2024-DEMO-0001" : "—"}
-              </div>
-            </div>
-            <div className="text-xs text-muted-foreground">
-              In demo mode, simply share this key with your colleague and have them visit the activation page, choose "Join", and enter this key.
-            </div>
+            <OrgLicenseKey />
           </div>
           <DialogFooter>
             <Button onClick={() => setInviteOpen(false)} className="cursor-pointer">Close</Button>
@@ -262,6 +261,48 @@ export function AdminView() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function OrgLicenseKey() {
+  const { data: org, isLoading } = useOrganization();
+  const [copied, setCopied] = useState(false);
+  if (isLoading) {
+    return <div className="text-xs text-muted-foreground text-center py-2">Loading…</div>;
+  }
+  if (!org) {
+    return <div className="text-xs text-muted-foreground text-center py-2">Organization not found.</div>;
+  }
+  return (
+    <>
+      <div className="rounded-md bg-muted/40 p-3">
+        <div className="text-[10px] font-mono-forensic uppercase tracking-wider text-muted-foreground">
+          Your organization license key
+        </div>
+        <div className="text-sm font-mono-forensic mt-1 break-all">{org.licenseKey}</div>
+      </div>
+      <div className="text-xs text-muted-foreground leading-relaxed">
+        Share this key with your colleague. Have them open FORENSIQ, choose{" "}
+        <strong>Register</strong>, fill in their details, select{" "}
+        <strong>Join existing</strong>, and enter this key. Their account will
+        be created with the <strong>investigator</strong> role. You can promote
+        them later from this panel.
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full cursor-pointer"
+        onClick={() => {
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(org.licenseKey);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }
+        }}
+      >
+        {copied ? "Copied!" : "Copy license key"}
+      </Button>
+    </>
   );
 }
 

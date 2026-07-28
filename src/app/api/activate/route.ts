@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { setSessionCookie, writeAuditLog, isValidLicenseFormat, DEMO_LICENSE_KEYS } from "@/lib/auth";
+import {
+  setSessionCookie,
+  writeAuditLog,
+  isValidLicenseFormat,
+  hashPassword,
+} from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +16,7 @@ interface ActivateBody {
   licenseType?: "standard" | "professional" | "enterprise";
   email: string;
   name: string;
+  password?: string; // required for new users
 }
 
 export async function POST(req: Request) {
@@ -20,67 +26,89 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  // Validate license key format. Demo keys always work.
-  const isDemoKey = DEMO_LICENSE_KEYS.includes(body.licenseKey);
-  if (!isDemoKey && !isValidLicenseFormat(body.licenseKey)) {
+  // Validate license-key format (real format only — no demo keys accepted).
+  if (!isValidLicenseFormat(body.licenseKey)) {
     return NextResponse.json(
-      { error: "Invalid license key format. Expected FORENSIQ-YYYY-XXXX-XXXX" },
+      { error: "Invalid license key. Expected format: FORENSIQ-YYYY-XXXXXX-XXXXXX" },
       { status: 400 }
     );
   }
 
-  // Create / fetch user
+  const normalizedEmail = body.email.toLowerCase();
+
+  // Look up the user — they must have signed up first.
   let user = await db.user.findUnique({
-    where: { email: body.email },
+    where: { email: normalizedEmail },
     include: { organization: true },
   });
+
   if (!user) {
+    // Require a password to create the account inline.
+    if (!body.password || body.password.length < 8) {
+      return NextResponse.json(
+        { error: "Password (min 8 characters) is required to register" },
+        { status: 400 }
+      );
+    }
+    const passwordHash = await hashPassword(body.password);
+    // The very first user in the entire database becomes the single
+    // platform admin. All subsequent users are investigators.
+    const userCount = await db.user.count();
+    const role = userCount === 0 ? "admin" : "investigator";
     user = await db.user.create({
       data: {
-        email: body.email,
-        name: body.name,
-        role: body.mode === "create" ? "admin" : "investigator",
+        email: normalizedEmail,
+        name: body.name.trim(),
+        passwordHash,
+        role,
         mfaEnabled: false,
         lastActive: new Date(),
-        tokenIdentifier: `email:${body.email}`,
+        tokenIdentifier: `email:${normalizedEmail}`,
       },
-      include: { organization: true },
-    });
-  } else if (!user.organizationId && body.mode === "create") {
-    // Promote to admin if they are creating an org
-    user = await db.user.update({
-      where: { id: user.id },
-      data: { name: body.name || user.name, role: "admin", lastActive: new Date() },
       include: { organization: true },
     });
   } else {
     user = await db.user.update({
       where: { id: user.id },
-      data: { name: body.name || user.name, lastActive: new Date() },
+      data: { name: body.name.trim() || user.name, lastActive: new Date() },
       include: { organization: true },
     });
   }
 
   if (user.organizationId) {
     return NextResponse.json(
-      { error: "User already belongs to an organization. Sign out first." },
+      { error: "User already belongs to an organization. Sign out and create a new account to switch." },
       { status: 400 }
     );
   }
 
   let organization;
   if (body.mode === "create") {
-    // Create new org
     if (!body.orgName) {
       return NextResponse.json({ error: "Organization name required" }, { status: 400 });
     }
+    // Ensure the license key isn't already in use by another org.
+    const existingOrg = await db.organization.findUnique({
+      where: { licenseKey: body.licenseKey },
+    });
+    if (existingOrg) {
+      return NextResponse.json(
+        { error: "This license key is already activated. Use 'Join' instead." },
+        { status: 400 }
+      );
+    }
     organization = await db.organization.create({
       data: {
-        name: body.orgName,
+        name: body.orgName.trim(),
         licenseKey: body.licenseKey,
         licenseType: body.licenseType || "professional",
         activatedById: user.id,
-        maxUsers: body.licenseType === "enterprise" ? 50 : body.licenseType === "standard" ? 5 : 15,
+        maxUsers:
+          body.licenseType === "enterprise"
+            ? 50
+            : body.licenseType === "standard"
+            ? 5
+            : 15,
       },
     });
     await db.user.update({

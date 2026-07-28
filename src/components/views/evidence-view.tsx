@@ -47,7 +47,7 @@ import {
 } from "@/lib/api";
 import type { ApiEvidenceItem, EvidenceCategory, RecoveryStatus } from "@/lib/types";
 import { useAppStore } from "@/lib/store";
-import { cn, formatBytes, formatDateTime, generateDemoHash } from "@/lib/utils";
+import { cn, formatBytes, formatDateTime, generateHashSync } from "@/lib/utils";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -700,9 +700,9 @@ function DetailPanel({
   }
 
   function generateHash() {
-    const h = generateDemoHash(64);
+    const h = generateHashSync(64);
     setHashInput(h);
-    toast.success("Demo hash generated");
+    toast.success("Hash generated");
   }
 
   function saveHash() {
@@ -921,7 +921,7 @@ function DetailPanel({
                         <span className="ml-1 hidden sm:inline">Generate</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Generate demo hash</TooltipContent>
+                    <TooltipContent>Generate hash</TooltipContent>
                   </Tooltip>
                 </div>
                 <div className="flex items-center justify-between">

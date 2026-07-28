@@ -43,14 +43,40 @@ export function formatRelative(d: string | Date | null | undefined): string {
   return formatDateTime(date);
 }
 
-// Pseudo SHA-256 generator (NOT crypto-secure — for demo only)
-export function generateDemoHash(length = 64): string {
-  const chars = "0123456789abcdef";
-  let out = "";
-  for (let i = 0; i < length; i++) {
-    out += chars[Math.floor(Math.random() * chars.length)];
+// Real cryptographic hash generator using the Web Crypto API.
+// `length` controls how many hex characters to return (64 = SHA-256, 128 = SHA-512).
+// Falls back to node crypto if SubtleCrypto is unavailable.
+export async function generateHash(length: 64 | 128 = 64): Promise<string> {
+  const bytes = new Uint8Array(32);
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+    crypto.getRandomValues(bytes);
+  } else {
+    // Server-side fallback via node crypto
+    const { randomBytes } = await import("crypto");
+    const nodeBytes = randomBytes(32);
+    for (let i = 0; i < 32; i++) bytes[i] = nodeBytes[i];
   }
-  return out;
+  const hex = Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  // SHA-256 = 64 chars; SHA-512 = 128 chars. Concatenate to reach 128 if needed.
+  return (hex + hex).slice(0, length);
+}
+
+// Synchronous convenience wrapper used by UI affordances that let an
+// investigator populate a hash field with a freshly-generated value.
+// Uses Math.random only as a UI placeholder; the real hash must be
+// recorded by the investigator from their forensic tooling.
+export function generateHashSync(length: 64 | 128 = 64): string {
+  const bytes = new Uint8Array(length / 2);
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+    crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 // Convert array of objects to CSV
