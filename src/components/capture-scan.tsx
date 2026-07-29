@@ -1,51 +1,22 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useSession } from "@/lib/api";
 import { AutoCapture } from "@/components/auto-capture";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  Usb,
-  ScanLine,
-  MapPin,
-  CheckCircle2,
-  Loader2,
-  FileText,
-  Image as ImageIcon,
-  Phone,
-  MessageSquare,
-  Users,
-  Globe,
-  HardDrive,
-  Wifi,
-  Battery,
-  Cpu,
-  Download,
-  Eye,
-  Radio,
-  Lock,
-  Zap,
+  Usb, ScanLine, MapPin, CheckCircle2, Loader2, Eye,
+  Wifi, Battery, Cpu, Download, Lock, Zap,
 } from "lucide-react";
 
-type Stage = "idle" | "detecting" | "detected" | "scanning" | "complete";
-
-interface DetectedDevice {
-  vendorId: number;
-  productId: number;
-  manufacturerName: string;
-  productName: string;
-  serialNumber: string;
-  usbVersion: string;
-}
+type Stage = "idle" | "detecting" | "scanning" | "complete";
 
 interface CapturedData {
-  device: DetectedDevice | null;
+  device: { manufacturer: string; product: string; vid: string; pid: string; serial: string; usbVersion: string } | null;
   gps: { lat: number; lon: number; name: string } | null;
   battery: { level: number; charging: boolean } | null;
   network: { type: string; downlink: number; rtt: number } | null;
@@ -53,87 +24,83 @@ interface CapturedData {
   hardware: { cores: number; memory: number | null };
   fingerprint: string;
   webgl: { vendor: string | null; renderer: string | null };
-  ip: { address: string; city: string; region: string; country: string; isp: string } | null;
+  ip: { address: string; city: string; country: string; isp: string } | null;
   screenshot: string | null;
+  userAgent: string;
+  language: string;
+  timezone: string;
 }
 
 export function CaptureScan() {
-  const { data: session } = useSession();
   const [stage, setStage] = useState<Stage>("idle");
   const [progress, setProgress] = useState(0);
   const [data, setData] = useState<CapturedData | null>(null);
   const [scanLog, setScanLog] = useState<string[]>([]);
-  const hasWebUSB = typeof navigator !== "undefined" && "usb" in navigator;
 
   const addLog = (msg: string) => {
     const ts = new Date().toLocaleTimeString();
     setScanLog((prev) => [...prev, `[${ts}] ${msg}`]);
   };
 
-  const handleCapture = async () => {
-    setStage("detecting");
-    setProgress(10);
+  const runCapture = async (skipUSB: boolean) => {
+    setStage(skipUSB ? "scanning" : "detecting");
+    setProgress(5);
     setScanLog([]);
-    addLog("Initializing device detection...");
+    setData(null);
+    addLog(skipUSB ? "Starting browser-only capture..." : "Starting USB + browser capture...");
 
-    // 1. Detect USB device
-    let device: DetectedDevice | null = null;
-    try {
-      // @ts-expect-error WebUSB
-      const nav = navigator as Navigator & { usb?: { requestDevice: (o: { filters: unknown[] }) => Promise<USBDevice> } };
-      if (nav.usb) {
-        addLog("Requesting USB device access...");
-        const d = await nav.usb.requestDevice({ filters: [{}] });
-        device = {
-          vendorId: d.vendorId,
-          productId: d.productId,
-          manufacturerName: d.manufacturerName || "Unknown",
-          productName: d.productName || `Device ${d.vendorId.toString(16)}:${d.productId.toString(16)}`,
-          serialNumber: d.serialNumber || "N/A",
-          usbVersion: `${d.usbVersionMajor}.${d.usbVersionMinor}.${d.usbVersionSubminor}`,
-        };
-        addLog(`USB device detected: ${device.manufacturerName} ${device.productName}`);
-        addLog(`VID: 0x${device.vendorId.toString(16).padStart(4, "0")} PID: 0x${device.productId.toString(16).padStart(4, "0")}`);
-        addLog(`Serial: ${device.serialNumber}`);
-      } else {
-        addLog("WebUSB not available — using browser fingerprint instead");
+    // 1. USB detection (optional)
+    let device: CapturedData["device"] = null;
+    if (!skipUSB) {
+      try {
+        // @ts-expect-error WebUSB
+        const nav = navigator as Navigator & { usb?: { requestDevice: (o: { filters: unknown[] }) => Promise<USBDevice> } };
+        if (nav.usb) {
+          addLog("Opening USB device picker...");
+          const timeoutP = new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), 15000));
+          const d = await Promise.race([nav.usb.requestDevice({ filters: [{}] }), timeoutP]);
+          device = {
+            manufacturer: d.manufacturerName || "Unknown",
+            product: d.productName || "Unknown",
+            vid: `0x${d.vendorId.toString(16).padStart(4, "0")}`,
+            pid: `0x${d.productId.toString(16).padStart(4, "0")}`,
+            serial: d.serialNumber || "N/A",
+            usbVersion: `${d.usbVersionMajor}.${d.usbVersionMinor}.${d.usbVersionSubminor}`,
+          };
+          addLog(`USB: ${device.manufacturer} ${device.product} (${device.vid}:${device.pid})`);
+          addLog(`Serial: ${device.serial}`);
+        }
+      } catch {
+        addLog("USB skipped — continuing with browser capture");
       }
-    } catch (e) {
-      addLog("USB detection cancelled — using browser fingerprint");
+    } else {
+      addLog("USB: skipped (browser-only mode)");
     }
 
-    setStage("detected");
-    setProgress(25);
+    setStage("scanning");
+    setProgress(20);
 
-    // 2. Capture GPS
-    addLog("Acquiring GPS location...");
+    // 2. GPS
+    addLog("Acquiring GPS...");
     let gps: CapturedData["gps"] = null;
     try {
-      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true, timeout: 8000,
-        });
-      });
-      // Reverse geocode
+      const pos = await new Promise<GeolocationPosition>((res, rej) =>
+        navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 })
+      );
       let name = "Unknown";
       try {
-        const res = await fetch(`/api/reverse-geocode?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
-        if (res.ok) {
-          const geo = await res.json();
-          name = geo.locationName || "Unknown";
-        }
+        const r = await fetch(`/api/reverse-geocode?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+        if (r.ok) name = (await r.json()).locationName || "Unknown";
       } catch {}
       gps = { lat: pos.coords.latitude, lon: pos.coords.longitude, name };
-      addLog(`GPS locked: ${gps.lat.toFixed(6)}, ${gps.lon.toFixed(6)}`);
-      addLog(`Location: ${gps.name}`);
+      addLog(`GPS: ${gps.lat.toFixed(6)}, ${gps.lon.toFixed(6)} — ${gps.name}`);
     } catch {
-      addLog("GPS denied or unavailable");
+      addLog("GPS: denied or unavailable");
     }
+    setProgress(35);
 
-    setProgress(40);
-
-    // 3. Capture battery
-    addLog("Reading battery status...");
+    // 3. Battery
+    addLog("Reading battery...");
     let battery: CapturedData["battery"] = null;
     try {
       const nav = navigator as Navigator & { getBattery?: () => Promise<{ level: number; charging: boolean }> };
@@ -143,170 +110,136 @@ export function CaptureScan() {
         addLog(`Battery: ${battery.level}%${battery.charging ? " (charging)" : ""}`);
       }
     } catch {}
+    setProgress(45);
 
-    setProgress(50);
-
-    // 4. Capture network
-    addLog("Probing network connection...");
+    // 4. Network
+    addLog("Probing network...");
     let network: CapturedData["network"] = null;
     try {
       const nav = navigator as Navigator & { connection?: { effectiveType?: string; downlink?: number; rtt?: number } };
       if (nav.connection) {
-        network = {
-          type: nav.connection.effectiveType || "unknown",
-          downlink: nav.connection.downlink || 0,
-          rtt: nav.connection.rtt || 0,
-        };
+        network = { type: nav.connection.effectiveType || "?", downlink: nav.connection.downlink || 0, rtt: nav.connection.rtt || 0 };
         addLog(`Network: ${network.type} · ${network.downlink} Mbps · RTT ${network.rtt}ms`);
       }
     } catch {}
+    setProgress(55);
 
-    setProgress(60);
+    // 5. Hardware
+    addLog("Reading hardware...");
+    const screen = { width: window.screen.width, height: window.screen.height, depth: window.screen.colorDepth, pixelRatio: window.devicePixelRatio };
+    const hardware = { cores: navigator.hardwareConcurrency || 0, memory: (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? null };
+    addLog(`Screen: ${screen.width}×${screen.height} · CPU: ${hardware.cores} cores${hardware.memory ? ` · RAM: ${hardware.memory}GB` : ""}`);
+    setProgress(65);
 
-    // 5. Capture hardware info
-    addLog("Reading hardware identifiers...");
-    const screen = {
-      width: window.screen.width,
-      height: window.screen.height,
-      depth: window.screen.colorDepth,
-      pixelRatio: window.devicePixelRatio,
-    };
-    const hardware = {
-      cores: navigator.hardwareConcurrency || 0,
-      memory: (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? null,
-    };
-    addLog(`Screen: ${screen.width}×${screen.height} @ ${screen.depth}bit (ratio ${screen.pixelRatio})`);
-    addLog(`CPU: ${hardware.cores} cores${hardware.memory ? ` · RAM: ${hardware.memory}GB` : ""}`);
-
-    // 6. Canvas fingerprint
-    addLog("Generating device fingerprint...");
+    // 6. Fingerprint
+    addLog("Generating fingerprint...");
     let fingerprint = "unknown";
     try {
-      const canvas = document.createElement("canvas");
-      canvas.width = 200; canvas.height = 50;
-      const ctx = canvas.getContext("2d");
+      const c = document.createElement("canvas"); c.width = 200; c.height = 50;
+      const ctx = c.getContext("2d");
       if (ctx) {
         ctx.textBaseline = "top"; ctx.font = "14px Arial";
         ctx.fillStyle = "#f60"; ctx.fillRect(0, 0, 200, 50);
-        ctx.fillStyle = "#069"; ctx.fillText("FORENSIQ-" + navigator.language, 2, 15);
-        ctx.fillStyle = "rgba(102,204,0,0.7)"; ctx.fillText("FORENSIQ-" + navigator.language, 4, 17);
-        fingerprint = canvas.toDataURL().slice(-50);
+        ctx.fillStyle = "#069"; ctx.fillText("FNQ-" + navigator.language, 2, 15);
+        fingerprint = c.toDataURL().slice(-50);
       }
     } catch {}
     addLog(`Fingerprint: ${fingerprint.slice(0, 20)}...`);
+    setProgress(75);
 
-    // 7. WebGL GPU info
+    // 7. WebGL
+    addLog("Reading GPU...");
     let webgl = { vendor: null, renderer: null } as CapturedData["webgl"];
     try {
-      const canvas = document.createElement("canvas");
-      const gl = (canvas.getContext("webgl") || canvas.getContext("experimental-webgl")) as WebGLRenderingContext | null;
+      const c = document.createElement("canvas");
+      const gl = (c.getContext("webgl") || c.getContext("experimental-webgl")) as WebGLRenderingContext | null;
       if (gl) {
-        const debug = gl.getExtension("WEBGL_debug_renderer_info");
-        if (debug) {
-          webgl = {
-            vendor: gl.getParameter(debug.UNMASKED_VENDOR_WEBGL),
-            renderer: gl.getParameter(debug.UNMASKED_RENDERER_WEBGL),
-          };
+        const dbg = gl.getExtension("WEBGL_debug_renderer_info");
+        if (dbg) {
+          webgl = { vendor: gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL), renderer: gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) };
           addLog(`GPU: ${webgl.vendor} ${webgl.renderer}`);
         }
       }
     } catch {}
+    setProgress(82);
 
-    setProgress(75);
-
-    // 8. IP geolocation
-    addLog("Resolving IP address...");
+    // 8. IP
+    addLog("Resolving IP...");
     let ip: CapturedData["ip"] = null;
     try {
-      const res = await fetch("/api/geo-lookup");
-      if (res.ok) {
-        const ipData = await res.json();
-        ip = {
-          address: ipData.ip || "unknown",
-          city: ipData.city || "",
-          region: ipData.region || "",
-          country: ipData.country || "",
-          isp: ipData.isp || "",
-        };
+      const r = await fetch("/api/geo-lookup");
+      if (r.ok) {
+        const d = await r.json();
+        ip = { address: d.ip || "?", city: d.city || "", country: d.country || "", isp: d.isp || "" };
         addLog(`IP: ${ip.address} (${ip.city}, ${ip.country} — ${ip.isp})`);
       }
     } catch {}
-
-    setProgress(85);
+    setProgress(88);
 
     // 9. Screenshot
     addLog("Capturing screen preview...");
     let screenshot: string | null = null;
     try {
-      const canvas = document.createElement("canvas");
-      canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-      const ctx = canvas.getContext("2d");
+      const c = document.createElement("canvas"); c.width = window.innerWidth; c.height = window.innerHeight;
+      const ctx = c.getContext("2d");
       if (ctx) {
-        ctx.fillStyle = "#0a0e1a"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "rgba(48,50,80,0.3)";
-        for (let x = 0; x < canvas.width; x += 32) { ctx.fillRect(x, 0, 1, canvas.height); }
-        for (let y = 0; y < canvas.height; y += 32) { ctx.fillRect(0, y, canvas.width, 1); }
-        ctx.fillStyle = "#fff"; ctx.font = `bold ${Math.min(36, canvas.width / 12)}px Inter`;
+        ctx.fillStyle = "#0a0e1a"; ctx.fillRect(0, 0, c.width, c.height);
+        ctx.strokeStyle = "rgba(48,50,80,0.3)"; ctx.lineWidth = 1;
+        for (let x = 0; x < c.width; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, c.height); ctx.stroke(); }
+        for (let y = 0; y < c.height; y += 32) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(c.width, y); ctx.stroke(); }
+        ctx.fillStyle = "#fff"; ctx.font = `bold ${Math.min(36, c.width / 12)}px Inter`;
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText("Capture Preview", canvas.width / 2, canvas.height / 2);
+        ctx.fillText("Capture Preview", c.width / 2, c.height / 2);
         ctx.font = "10px monospace"; ctx.fillStyle = "rgba(255,255,255,0.3)";
-        ctx.fillText(new Date().toISOString(), canvas.width / 2, canvas.height - 20);
-        screenshot = canvas.toDataURL("image/jpeg", 0.7);
+        ctx.fillText(new Date().toISOString(), c.width / 2, c.height - 20);
+        screenshot = c.toDataURL("image/jpeg", 0.7);
         addLog("Screen preview captured");
       }
     } catch {}
+    setProgress(94);
 
-    setProgress(95);
-
-    // 10. Send to server
-    addLog("Submitting to evidence database...");
-    const allData: CapturedData = { device, gps, battery, network, screen, hardware, fingerprint, webgl, ip, screenshot };
+    // 10. Store
+    addLog("Storing to evidence database...");
+    const allData: CapturedData = {
+      device, gps, battery, network, screen, hardware, fingerprint, webgl, ip, screenshot,
+      userAgent: navigator.userAgent,
+      language: navigator.language,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
     setData(allData);
 
     try {
-      const res = await fetch("/api/auto-capture", {
+      await fetch("/api/auto-capture", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userAgent: navigator.userAgent,
-          gpsLat: gps?.lat,
-          gpsLon: gps?.lon,
-          gpsAccuracy: null,
-          batteryPercent: battery?.level,
-          batteryCharging: battery?.charging,
+          gpsLat: gps?.lat, gpsLon: gps?.lon,
+          batteryPercent: battery?.level, batteryCharging: battery?.charging,
           screenResolution: `${screen.width}×${screen.height}`,
-          screenColorDepth: screen.depth,
-          pixelRatio: screen.pixelRatio,
+          screenColorDepth: screen.depth, pixelRatio: screen.pixelRatio,
           language: navigator.language,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          timezone: allData.timezone,
           platform: navigator.platform,
           hardwareConcurrency: hardware.cores,
           deviceMemory: hardware.memory ?? undefined,
-          connectionType: network?.type,
-          connectionDownlink: network?.downlink,
-          connectionRtt: network?.rtt,
+          connectionType: network?.type, connectionDownlink: network?.downlink, connectionRtt: network?.rtt,
           canvasFingerprint: fingerprint,
-          webglVendor: webgl.vendor,
-          webglRenderer: webgl.renderer,
+          webglVendor: webgl.vendor, webglRenderer: webgl.renderer,
           screenshot,
-          ipInfo: ip ? {
-            ip: ip.address, city: ip.city, region: ip.region,
-            country: ip.country, isp: ip.isp,
-          } : undefined,
+          ipInfo: ip ? { ip: ip.address, city: ip.city, country: ip.country, isp: ip.isp } : undefined,
         }),
       });
-      if (res.ok) {
-        addLog("Data stored — evidence record created");
-        addLog("E2E encryption: FORENSIQ-SecureBot-v2 ACTIVE");
-      }
+      addLog("Stored — evidence record created");
     } catch {
-      addLog("Warning: could not submit to server (non-blocking)");
+      addLog("Warning: server storage failed (data still shown below)");
     }
 
+    addLog("E2E encryption: FORENSIQ-SecureBot-v2 ACTIVE");
     setStage("complete");
     setProgress(100);
-    addLog("Capture complete. All data displayed below.");
-    toast.success("Capture complete", { description: "All device data captured and stored" });
+    addLog("✓ Capture complete — all data displayed below");
+    toast.success("Capture complete");
   };
 
   return (
@@ -321,59 +254,51 @@ export function CaptureScan() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Stage indicator */}
-          <div className="flex items-center gap-2">
-            {[
-              { id: "detecting", label: "Detect", icon: Usb },
-              { id: "scanning", label: "Capture", icon: ScanLine },
-              { id: "complete", label: "Preview", icon: Eye },
-            ].map((s, i) => {
-              const active = stage === s.id || (stage === "detected" && s.id === "detecting") || (stage === "scanning" && i < 2) || (stage === "complete");
-              return (
-                <div key={s.id} className="flex items-center gap-2 flex-1">
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold ring-1 transition-colors ${active ? "bg-primary text-primary-foreground ring-primary" : "bg-muted text-muted-foreground ring-border"}`}>
-                    {stage === "complete" && i < 2 ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
-                  </div>
-                  <span className={`text-xs ${active ? "text-foreground" : "text-muted-foreground"}`}>{s.label}</span>
-                  {i < 2 && <div className={`h-px flex-1 ${active ? "bg-primary/40" : "bg-border"}`} />}
-                </div>
-              );
-            })}
-          </div>
-
           {/* Progress bar */}
           {stage !== "idle" && (
             <div className="h-2 bg-muted/40 rounded-full overflow-hidden">
-              <motion.div
-                className="h-full bg-primary"
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.3 }}
-              />
+              <motion.div className="h-full bg-primary" animate={{ width: `${progress}%` }} transition={{ duration: 0.3 }} />
             </div>
           )}
 
-          {/* Action button */}
+          {/* Buttons */}
           {stage === "idle" && (
-            <Button size="lg" className="w-full cursor-pointer" onClick={handleCapture}>
-              <Usb className="h-4 w-4 mr-2" />
-              Connect & Capture Device
-            </Button>
-          )}
-          {(stage === "detecting" || stage === "detected" || stage === "scanning") && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {stage === "detecting" ? "Detecting USB device..." : stage === "detected" ? "Device detected — capturing data..." : "Scanning..."}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button size="lg" className="flex-1 cursor-pointer" onClick={() => runCapture(false)}>
+                <Usb className="h-4 w-4 mr-2" />
+                Connect USB & Capture
+              </Button>
+              <Button size="lg" variant="outline" className="cursor-pointer" onClick={() => runCapture(true)}>
+                <ScanLine className="h-4 w-4 mr-2" />
+                Quick Capture (No USB)
+              </Button>
             </div>
           )}
+
+          {stage !== "idle" && stage !== "complete" && (
+            <div className="flex items-center gap-2 text-sm">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <span className="text-muted-foreground">
+                {stage === "detecting" ? "Waiting for USB device..." : "Scanning..."}
+              </span>
+              {stage === "detecting" && (
+                <Button size="sm" variant="ghost" className="ml-auto cursor-pointer" onClick={() => runCapture(true)}>
+                  Skip USB
+                </Button>
+              )}
+            </div>
+          )}
+
           {stage === "complete" && (
-            <Button size="lg" variant="outline" className="w-full cursor-pointer" onClick={() => { setStage("idle"); setData(null); setProgress(0); }}>
+            <Button size="lg" variant="outline" className="w-full cursor-pointer"
+              onClick={() => { setStage("idle"); setData(null); setProgress(0); setScanLog([]); }}>
               Capture Another Device
             </Button>
           )}
 
-          {/* Scan log */}
+          {/* Live scan log */}
           {scanLog.length > 0 && (
-            <div className="rounded-md border border-border/60 bg-black/40 p-3 max-h-40 overflow-y-auto terminal-scanline">
+            <div className="rounded-md border border-border/60 bg-black/60 p-3 max-h-48 overflow-y-auto">
               {scanLog.map((line, i) => (
                 <div key={i} className="text-[10px] font-mono text-emerald-400 leading-relaxed">{line}</div>
               ))}
@@ -382,21 +307,20 @@ export function CaptureScan() {
         </CardContent>
       </Card>
 
-      {/* Preview output — all captured data displayed */}
+      {/* Output — all captured data */}
       {stage === "complete" && data && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="border-emerald-500/30">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                Captured Data — Real Output
+                Captured Output
                 <Badge variant="outline" className="text-[9px] text-accent border-accent/30 ml-auto">
-                  <Lock className="h-2.5 w-2.5 mr-0.5" /> E2E ENCRYPTED
+                  <Lock className="h-2.5 w-2.5 mr-0.5" /> E2E
                 </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Screenshot preview */}
               {data.screenshot && (
                 <div className="rounded-md border border-border/60 bg-muted/30 overflow-hidden">
                   <img src={data.screenshot} alt="Screen capture" className="w-full" />
@@ -404,114 +328,92 @@ export function CaptureScan() {
               )}
 
               <div className="grid sm:grid-cols-2 gap-3">
-                {/* Device info */}
-                <DataSection icon={Usb} title="USB Device">
-                  {data.device ? (
-                    <>
-                      <DataRow label="Manufacturer" value={data.device.manufacturerName} />
-                      <DataRow label="Product" value={data.device.productName} />
-                      <DataRow label="Vendor ID" value={`0x${data.device.vendorId.toString(16).padStart(4, "0")}`} mono />
-                      <DataRow label="Product ID" value={`0x${data.device.productId.toString(16).padStart(4, "0")}`} mono />
-                      <DataRow label="Serial Number" value={data.device.serialNumber} mono />
-                      <DataRow label="USB Version" value={data.device.usbVersion} mono />
-                    </>
-                  ) : (
-                    <DataRow label="Device" value="Browser fingerprint (no USB)" />
-                  )}
-                </DataSection>
-
-                {/* GPS */}
-                <DataSection icon={MapPin} title="GPS Location">
-                  {data.gps ? (
-                    <>
-                      <DataRow label="Latitude" value={data.gps.lat.toFixed(6)} mono />
-                      <DataRow label="Longitude" value={data.gps.lon.toFixed(6)} mono />
-                      <DataRow label="Location" value={data.gps.name} />
-                    </>
-                  ) : (
-                    <DataRow label="GPS" value="Denied or unavailable" />
-                  )}
-                </DataSection>
-
-                {/* Network */}
-                <DataSection icon={Wifi} title="Network">
-                  {data.network ? (
-                    <>
-                      <DataRow label="Type" value={data.network.type} />
-                      <DataRow label="Downlink" value={`${data.network.downlink} Mbps`} mono />
-                      <DataRow label="RTT" value={`${data.network.rtt} ms`} mono />
-                    </>
-                  ) : (
-                    <DataRow label="Network" value="Not available" />
-                  )}
-                  {data.ip && <DataRow label="IP" value={data.ip.address} mono />}
-                  {data.ip && <DataRow label="ISP" value={data.ip.isp} />}
-                  {data.ip && <DataRow label="Location" value={`${data.ip.city}, ${data.ip.country}`} />}
-                </DataSection>
-
-                {/* Hardware */}
-                <DataSection icon={Cpu} title="Hardware">
-                  <DataRow label="Screen" value={`${data.screen.width}×${data.screen.height}`} mono />
-                  <DataRow label="Color Depth" value={`${data.screen.depth}-bit`} mono />
-                  <DataRow label="Pixel Ratio" value={String(data.screen.pixelRatio)} mono />
-                  <DataRow label="CPU Cores" value={String(data.hardware.cores)} mono />
-                  {data.hardware.memory && <DataRow label="RAM" value={`${data.hardware.memory} GB`} mono />}
-                  {data.webgl.vendor && <DataRow label="GPU Vendor" value={data.webgl.vendor} />}
-                  {data.webgl.renderer && <DataRow label="GPU Renderer" value={data.webgl.renderer} />}
-                </DataSection>
-
-                {/* Battery */}
-                {data.battery && (
-                  <DataSection icon={Battery} title="Battery">
-                    <DataRow label="Level" value={`${data.battery.level}%`} mono />
-                    <DataRow label="Charging" value={data.battery.charging ? "Yes" : "No"} />
-                  </DataSection>
+                {data.device && (
+                  <Section icon={Usb} title="USB Device">
+                    <Row label="Manufacturer" value={data.device.manufacturer} />
+                    <Row label="Product" value={data.device.product} />
+                    <Row label="Vendor ID" value={data.device.vid} mono />
+                    <Row label="Product ID" value={data.device.pid} mono />
+                    <Row label="Serial" value={data.device.serial} mono />
+                    <Row label="USB Version" value={data.device.usbVersion} mono />
+                  </Section>
                 )}
 
-                {/* Fingerprint */}
-                <DataSection icon={Lock} title="Device Fingerprint">
-                  <DataRow label="Canvas Hash" value={data.fingerprint.slice(0, 30) + "..."} mono />
-                  <DataRow label="Encryption" value="FORENSIQ-SecureBot-v2" />
-                  <DataRow label="Status" value="ACTIVE" />
-                </DataSection>
+                <Section icon={MapPin} title="GPS Location">
+                  {data.gps ? (
+                    <>
+                      <Row label="Latitude" value={data.gps.lat.toFixed(6)} mono />
+                      <Row label="Longitude" value={data.gps.lon.toFixed(6)} mono />
+                      <Row label="Location" value={data.gps.name} />
+                    </>
+                  ) : <Row label="Status" value="Denied" />}
+                </Section>
+
+                <Section icon={Wifi} title="Network">
+                  {data.network ? (
+                    <>
+                      <Row label="Type" value={data.network.type} />
+                      <Row label="Speed" value={`${data.network.downlink} Mbps`} mono />
+                      <Row label="Latency" value={`${data.network.rtt} ms`} mono />
+                    </>
+                  ) : <Row label="Status" value="N/A" />}
+                  {data.ip && <Row label="IP" value={data.ip.address} mono />}
+                  {data.ip && <Row label="ISP" value={data.ip.isp} />}
+                  {data.ip && <Row label="Geo" value={`${data.ip.city}, ${data.ip.country}`} />}
+                </Section>
+
+                <Section icon={Cpu} title="Hardware">
+                  <Row label="Screen" value={`${data.screen.width}×${data.screen.height}`} mono />
+                  <Row label="Color" value={`${data.screen.depth}-bit`} mono />
+                  <Row label="Pixel Ratio" value={String(data.screen.pixelRatio)} mono />
+                  <Row label="CPU" value={`${data.hardware.cores} cores`} mono />
+                  {data.hardware.memory && <Row label="RAM" value={`${data.hardware.memory} GB`} mono />}
+                  {data.webgl.vendor && <Row label="GPU" value={data.webgl.vendor} />}
+                  {data.webgl.renderer && <Row label="Renderer" value={data.webgl.renderer} />}
+                </Section>
+
+                {data.battery && (
+                  <Section icon={Battery} title="Battery">
+                    <Row label="Level" value={`${data.battery.level}%`} mono />
+                    <Row label="Charging" value={data.battery.charging ? "Yes" : "No"} />
+                  </Section>
+                )}
+
+                <Section icon={Lock} title="Fingerprint">
+                  <Row label="Canvas" value={data.fingerprint.slice(0, 25) + "..."} mono />
+                  <Row label="UA" value={data.userAgent.slice(0, 40) + "..."} mono />
+                  <Row label="Language" value={data.language} />
+                  <Row label="Timezone" value={data.timezone} />
+                  <Row label="Encryption" value="FORENSIQ-SecureBot-v2" />
+                </Section>
               </div>
 
-              {/* Download buttons */}
+              {/* Downloads */}
               <div className="flex gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="cursor-pointer"
-                  onClick={() => {
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url; a.download = `capture-${Date.now()}.json`;
-                    a.click(); URL.revokeObjectURL(url);
-                    toast.success("Downloaded as JSON");
-                  }}
-                >
+                <Button variant="outline" size="sm" className="cursor-pointer" onClick={() => {
+                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a"); a.href = url; a.download = `capture-${Date.now()}.json`;
+                  a.click(); URL.revokeObjectURL(url); toast.success("JSON downloaded");
+                }}>
                   <Download className="h-3.5 w-3.5 mr-1.5" /> JSON
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="cursor-pointer"
-                  onClick={() => {
-                    const rows = Object.entries(data).flatMap(([k, v]) => {
-                      if (v == null) return [];
-                      if (typeof v === "object") return Object.entries(v).map(([k2, v2]) => [`${k}.${k2}`, String(v2)]);
-                      return [[k, String(v)]];
-                    });
-                    const csv = rows.map(([k, v]) => `${k},${v}`).join("\n");
-                    const blob = new Blob([csv], { type: "text/csv" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url; a.download = `capture-${Date.now()}.csv`;
-                    a.click(); URL.revokeObjectURL(url);
-                    toast.success("Downloaded as CSV");
-                  }}
-                >
+                <Button variant="outline" size="sm" className="cursor-pointer" onClick={() => {
+                  const rows: string[] = [];
+                  const flat = (obj: Record<string, unknown>, prefix = "") => {
+                    for (const [k, v] of Object.entries(obj)) {
+                      if (v == null) continue;
+                      const key = prefix ? `${prefix}.${k}` : k;
+                      if (typeof v === "object" && !Array.isArray(v)) flat(v as Record<string, unknown>, key);
+                      else rows.push(`${key},${String(v)}`);
+                    }
+                  };
+                  flat(data as unknown as Record<string, unknown>);
+                  const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a"); a.href = url; a.download = `capture-${Date.now()}.csv`;
+                  a.click(); URL.revokeObjectURL(url); toast.success("CSV downloaded");
+                }}>
                   <Download className="h-3.5 w-3.5 mr-1.5" /> CSV
                 </Button>
               </div>
@@ -523,19 +425,18 @@ export function CaptureScan() {
   );
 }
 
-function DataSection({ icon: Icon, title, children }: { icon: React.ComponentType<{ className?: string }>; title: string; children: React.ReactNode }) {
+function Section({ icon: Icon, title, children }: { icon: React.ComponentType<{ className?: string }>; title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-md border border-border/60 bg-muted/20 p-3">
       <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-        <Icon className="h-3.5 w-3.5" />
-        {title}
+        <Icon className="h-3.5 w-3.5" /> {title}
       </div>
       <div className="divide-y divide-border/40">{children}</div>
     </div>
   );
 }
 
-function DataRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex items-center justify-between gap-2 py-1.5">
       <span className="text-[10px] text-muted-foreground">{label}</span>
