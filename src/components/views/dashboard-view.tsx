@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { USBScanner } from "@/components/usb-scanner";
+import { CaptureScan } from "@/components/capture-scan";
 import { cn, formatRelative } from "@/lib/utils";
 import { useAppStore as _useAppStore } from "@/lib/store";
 import {
@@ -178,6 +179,9 @@ export function DashboardView() {
               </motion.div>
             ))}
       </div>
+
+      {/* Capture · Detect · Scan · Preview */}
+      <CaptureScan />
 
       {/* USB Scanner — real device scanning */}
       <USBScanner />
