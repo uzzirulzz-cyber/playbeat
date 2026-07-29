@@ -1,9 +1,15 @@
 "use client";
 
 import { useSession, useSignIn } from "@/lib/api";
-import { AdminView } from "@/components/views/admin-view";
 import { AppShell } from "@/components/app-shell";
 import { AutoCapture } from "@/components/auto-capture";
+import { DashboardView } from "@/components/views/dashboard-view";
+import { CasesView } from "@/components/views/cases-view";
+import { CaseDetailView } from "@/components/views/case-detail-view";
+import { ProfileView } from "@/components/views/profile-view";
+import { AdminView } from "@/components/views/admin-view";
+import { AuditView } from "@/components/views/audit-view";
+import { useView } from "@/lib/view-router";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -12,11 +18,11 @@ import { useState, useEffect } from "react";
 export default function AdminPage() {
   const { data: session, isLoading, isError, refetch } = useSession();
   const signIn = useSignIn();
+  const view = useView((s) => s.view);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
 
-  // If session query errors out, retry after a delay
   useEffect(() => {
     if (isError) {
       const timer = setTimeout(() => refetch(), 2000);
@@ -24,14 +30,6 @@ export default function AdminPage() {
     }
   }, [isError, refetch]);
 
-  // Track if we just signed in — show loading while session catches up
-  useEffect(() => {
-    if (authed && session?.user && session.organization) {
-      // Session is ready — stop showing loading
-    }
-  }, [authed, session]);
-
-  // Loading state (initial load or post-signin)
   if (isLoading || authed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -40,17 +38,13 @@ export default function AdminPage() {
     );
   }
 
-  // Not authenticated — show login form
   if (!session?.user || !session.organization) {
     const handleSignIn = async () => {
       if (!email || !password) return;
       try {
         await signIn.mutateAsync({ email, password });
         setAuthed(true);
-        // Invalidate and refetch session
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
+        setTimeout(() => window.location.reload(), 1000);
       } catch (e) {
         toast.error((e as Error).message);
         setAuthed(false);
@@ -85,10 +79,16 @@ export default function AdminPage() {
     );
   }
 
-  // Authenticated — show admin panel
+  // Authenticated — render the correct view based on hash router
   return (
     <AppShell>
-      <AdminView />
+      {view.name === "dashboard" && <DashboardView />}
+      {view.name === "cases" && <CasesView />}
+      {view.name === "case" && <CaseDetailView caseId={view.caseId} tab={view.tab ?? "overview"} />}
+      {view.name === "profile" && <ProfileView />}
+      {view.name === "admin" && <AdminView />}
+      {view.name === "audit" && <AuditView />}
+      {view.name === "storefront" && <AdminView />}
     </AppShell>
   );
 }
