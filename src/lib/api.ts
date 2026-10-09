@@ -315,6 +315,26 @@ export const useAdminLiveMonitor = (isAdmin: boolean) =>
     refetchInterval: 30_000, // auto-update every 30s
   });
 
+
+
+/* ====== Adsterra Social Bar reporting ====== */
+export interface AdsterraStats {
+  configured: boolean;
+  connected: boolean;
+  period?: { start: string; finish: string };
+  totals?: { impressions: number; clicks: number; ctr: number; revenue: number };
+  placements?: Array<{ name: string; impressions: number; clicks: number; ctr: number; cpm: number; revenue: number }>;
+  error?: string;
+}
+
+export const useAdminAdsterraStats = (isAdmin: boolean) =>
+  useQuery({
+    queryKey: ["admin-adsterra-stats"],
+    queryFn: () => api<AdsterraStats>("/api/admin/adsterra-stats"),
+    enabled: isAdmin,
+    refetchInterval: 10 * 60_000,
+  });
+
 /* ====== Auto-Capture (mobile device detection) ====== */
 
 export const useAutoCapture = () => {
