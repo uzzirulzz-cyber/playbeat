@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, useTeam, useUpdateTeamMember, useOrganization, useAdminAllData, useAdminLiveMonitor } from "@/lib/api";
+import { useSession, useTeam, useUpdateTeamMember, useOrganization, useAdminAllData, useAdminLiveMonitor, useAdminAdsterraStats } from "@/lib/api";
 import { useView } from "@/lib/view-router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ import {
   Cpu,
   FileDown,
   Activity,
+  BarChart3,
   Eye,
   Zap,
   Bot,
@@ -207,6 +208,7 @@ export function AdminView() {
 
       {/* Live Monitor — admin real-time access to ALL devices (auto-updates 30s) */}
       <AdminLiveMonitorSection />
+      <AdsterraStatsSection />
 
       {/* All Data — Admin super-power oversight of all members' work */}
       <AdminAllDataSection />
@@ -489,6 +491,101 @@ const CAT_ICONS: Record<string, React.ReactNode> = {
   installed_apps: <AppWindow className="h-3 w-3" />,
   other: <FileText className="h-3 w-3" />,
 };
+
+function AdsterraStatsSection() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
+  const { data, isLoading, isError, refetch, isFetching } = useAdminAdsterraStats(isAdmin);
+
+  if (!isAdmin) return null;
+
+  const totals = data?.totals;
+  const metrics = [
+    { label: "Impressions", value: totals?.impressions?.toLocaleString() ?? "—" },
+    { label: "Clicks", value: totals?.clicks?.toLocaleString() ?? "—" },
+    { label: "CTR", value: totals ? `${totals.ctr.toFixed(2)}%` : "—" },
+    { label: "Revenue", value: totals ? `${totals.revenue.toFixed(2)}` : "—" },
+  ];
+
+  return (
+    <Card className="border-border/60">
+      <CardHeader className="pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-emerald-400" /> Adsterra Social Bar
+            </CardTitle>
+            <CardDescription className="mt-1">
+              Publisher performance for the last 7 days
+              {data?.period ? ` · ${data.period.start} to ${data.period.finish}` : ""}
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className={data?.connected ? "text-emerald-400 border-emerald-500/30" : "text-amber-400 border-amber-500/30"}>
+              {isLoading ? "LOADING" : data?.connected ? "CONNECTED" : data?.configured ? "UNAVAILABLE" : "SETUP REQUIRED"}
+            </Badge>
+            <Button variant="ghost" size="sm" onClick={() => refetch()} disabled={isFetching} className="cursor-pointer">
+              {isFetching ? "Refreshing…" : "Refresh"}
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isError ? (
+          <div className="text-xs text-destructive">Adsterra reporting could not be loaded.</div>
+        ) : !data?.configured ? (
+          <div className="rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">
+            Add the server-side <span className="font-mono-forensic text-foreground">ADSTERRA_API_KEY</span> in the admin deployment environment to connect reporting. No sample figures are shown.
+          </div>
+        ) : !data.connected ? (
+          <div className="rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">
+            {data.error ?? "Adsterra reporting is temporarily unavailable. Refresh to try again."}
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {metrics.map((metric) => (
+                <div key={metric.label} className="rounded-md bg-muted/30 p-3">
+                  <div className="text-[10px] font-mono-forensic uppercase tracking-wider text-muted-foreground">{metric.label}</div>
+                  <div className="mt-1 text-xl font-semibold font-mono-forensic">{metric.value}</div>
+                </div>
+              ))}
+            </div>
+            <div className="overflow-x-auto rounded-md border border-border/50">
+              <table className="w-full text-xs">
+                <thead className="bg-muted/30 text-muted-foreground">
+                  <tr className="text-left">
+                    <th className="p-2.5 font-medium">Placement</th>
+                    <th className="p-2.5 text-right font-medium">Impressions</th>
+                    <th className="p-2.5 text-right font-medium">Clicks</th>
+                    <th className="p-2.5 text-right font-medium">CTR</th>
+                    <th className="p-2.5 text-right font-medium">CPM</th>
+                    <th className="p-2.5 text-right font-medium">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {(data.placements ?? []).map((placement, index) => (
+                    <tr key={`${placement.name}-${index}`}>
+                      <td className="p-2.5">{placement.name}</td>
+                      <td className="p-2.5 text-right font-mono-forensic">{placement.impressions.toLocaleString()}</td>
+                      <td className="p-2.5 text-right font-mono-forensic">{placement.clicks.toLocaleString()}</td>
+                      <td className="p-2.5 text-right font-mono-forensic">{placement.ctr.toFixed(2)}%</td>
+                      <td className="p-2.5 text-right font-mono-forensic">${placement.cpm.toFixed(2)}</td>
+                      <td className="p-2.5 text-right font-mono-forensic">${placement.revenue.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {(data.placements ?? []).length === 0 && (
+                <div className="p-4 text-center text-xs text-muted-foreground">No placement stats returned for this period.</div>
+              )}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function AdminAllDataSection() {
   const { data, isLoading } = useAdminAllData();
